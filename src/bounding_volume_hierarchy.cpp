@@ -1,16 +1,79 @@
 #include "bounding_volume_hierarchy.h"
 #include "draw.h"
+#include "interpolate.h"
 #include "intersect.h"
 #include "scene.h"
 #include "texture.h"
-#include "interpolate.h"
 #include <glm/glm.hpp>
 
+std::vector<BVHNode> nodes;
+int rootNodeId = 0, nodesUsed = 1;
+std::vector<glm::uvec3> alltriangles;
+std::vector<Mesh> allmeshes;
+std::vector<int> meshpointer;
 
 BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     : m_pScene(pScene)
 {
-    // TODO: implement BVH construction.
+    Scene ourscene = pScene[0];
+
+    // nu alleen gedaan met triangels vgm moet het ook met spheres
+    //  TODO: implement BVH construction
+    int meshid = 0;
+    for (Mesh m : ourscene.meshes) {
+        for (glm::uvec3 t : m.triangles) {
+            alltriangles.push_back(t);
+            meshpointer.push_back(meshid);
+        }
+        allmeshes.push_back(m);
+        meshid++;
+    }
+    int N = alltriangles.size();
+
+    BVHNode& root = nodes[rootNodeId];
+    root.leftchild = 0;
+    root.rigthchild = 0;
+    root.firsttri = 0, root.triCount = 0;
+    UpdateNodeBounds(rootNodeId);
+    subdivide(rootNodeId, 0);
+}
+
+void UpdateNodeBounds(int NodeId)
+{
+    BVHNode& node = nodes[NodeId];
+    node.aabbMin[0] = std::numeric_limits<float>::max();
+    node.aabbMin[1] = std::numeric_limits<float>::max();
+    node.aabbMin[2] = std::numeric_limits<float>::max();
+
+    node.aabbMax[0] = std::numeric_limits<float>::min();
+    node.aabbMax[1] = std::numeric_limits<float>::min();
+    node.aabbMax[2] = std::numeric_limits<float>::min();
+
+    for (int first = node.firsttri, i = 0; i < node.triCount; i++) {
+        glm::uvec3& triangle = alltriangles[first + i];
+        int meshid = meshpointer[first + i];
+        Mesh mesh = allmeshes[meshid];
+        node.aabbMin[0] = fminf(node.aabbMin[0], mesh.vertices[triangle.x].position[0]);
+        node.aabbMin[1] = fminf(node.aabbMin[1], mesh.vertices[triangle.y].position[1]);
+        node.aabbMin[2] = fminf(node.aabbMin[2], mesh.vertices[triangle.z].position[2]);
+
+        node.aabbMax[0] = fminf(node.aabbMax[0], mesh.vertices[triangle.x].position[0]);
+        node.aabbMax[1] = fminf(node.aabbMax[1], mesh.vertices[triangle.y].position[1]);
+        node.aabbMax[2] = fminf(node.aabbMax[2], mesh.vertices[triangle.z].position[2]);
+    }
+}
+
+void subdivide(int NodeId, int axis)
+{
+    BVHNode& node = nodes[NodeId];
+    if (node.triCount <= 2)
+        return;
+    glm::vec3 extent = node.aabbMax - node.aabbMin;
+    float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+    int i = node.firsttri;
+    int j = i + node.triCount - 1;
+    //--to be implemented--
+    return;
 }
 
 // Return the depth of the tree that you constructed. This is used to tell the
@@ -33,15 +96,14 @@ int BoundingVolumeHierarchy::numLeaves() const
 void BoundingVolumeHierarchy::debugDrawLevel(int level)
 {
     // Draw the AABB as a transparent green box.
-    //AxisAlignedBox aabb{ glm::vec3(-0.05f), glm::vec3(0.05f, 1.05f, 1.05f) };
-    //drawShape(aabb, DrawMode::Filled, glm::vec3(0.0f, 1.0f, 0.0f), 0.2f);
+    // AxisAlignedBox aabb{ glm::vec3(-0.05f), glm::vec3(0.05f, 1.05f, 1.05f) };
+    // drawShape(aabb, DrawMode::Filled, glm::vec3(0.0f, 1.0f, 0.0f), 0.2f);
 
     // Draw the AABB as a (white) wireframe box.
     AxisAlignedBox aabb { glm::vec3(0.0f), glm::vec3(0.0f, 1.05f, 1.05f) };
-    //drawAABB(aabb, DrawMode::Wireframe);
+    // drawAABB(aabb, DrawMode::Wireframe);
     drawAABB(aabb, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
 }
-
 
 // Use this function to visualize your leaf nodes. This is useful for debugging. The function
 // receives the leaf node to be draw (think of the ith leaf node). Draw the AABB of the leaf node and all contained triangles.
@@ -50,17 +112,16 @@ void BoundingVolumeHierarchy::debugDrawLevel(int level)
 void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
 {
     // Draw the AABB as a transparent green box.
-    //AxisAlignedBox aabb{ glm::vec3(-0.05f), glm::vec3(0.05f, 1.05f, 1.05f) };
-    //drawShape(aabb, DrawMode::Filled, glm::vec3(0.0f, 1.0f, 0.0f), 0.2f);
+    // AxisAlignedBox aabb{ glm::vec3(-0.05f), glm::vec3(0.05f, 1.05f, 1.05f) };
+    // drawShape(aabb, DrawMode::Filled, glm::vec3(0.0f, 1.0f, 0.0f), 0.2f);
 
     // Draw the AABB as a (white) wireframe box.
     AxisAlignedBox aabb { glm::vec3(0.0f), glm::vec3(0.0f, 1.05f, 1.05f) };
-    //drawAABB(aabb, DrawMode::Wireframe);
+    // drawAABB(aabb, DrawMode::Wireframe);
     drawAABB(aabb, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
 
     // once you find the leaf node, you can use the function drawTriangle (from draw.h) to draw the contained primitives
 }
-
 
 // Return true if something is hit, returns false otherwise. Only find hits if they are closer than t stored
 // in the ray and if the intersection is on the correct side of the origin (the new t >= 0). Replace the code

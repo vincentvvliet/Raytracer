@@ -6,6 +6,12 @@
 
 // Forward declaration.
 struct Scene;
+struct BVHNode {
+    glm::vec3 aabbMin, aabbMax;
+    int leftchild, rightchild;
+    int firsttri, triCount;
+    bool isLeaf() { return triCount>0;}
+};
 
 class BoundingVolumeHierarchy {
 public:
