@@ -5,6 +5,7 @@
 #include "texture.h"
 #include "interpolate.h"
 #include <glm/glm.hpp>
+#include <iostream>
 
 
 BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
