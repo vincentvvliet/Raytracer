@@ -6,6 +6,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/geometric.hpp>
 DISABLE_WARNINGS_POP()
 #include <cmath>
+#include <iostream>
 
 
 // samples a segment light source
@@ -71,12 +72,26 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
 {
     if (features.enableShading) {
         // If shading is enabled, compute the contribution from all lights.
+        glm::vec3 total = glm::vec3(0.0f, 0.0f, 0.0f);
+        for (const auto& light : scene.lights) {
+            if (std::holds_alternative<PointLight>(light)) {
+                const PointLight pointLight = std::get<PointLight>(light);
+                // Perform your calculations for a point light.
+                glm::vec3 intersection = ray.origin + ray.t * ray.direction;
 
-        // TODO: replace this by your own implementation of shading
-        return hitInfo.material.kd;
+                total += computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
+            } else if (std::holds_alternative<SegmentLight>(light)) {
+                const SegmentLight segmentLight = std::get<SegmentLight>(light);
+                // Perform your calculations for a segment light.
+            } else if (std::holds_alternative<ParallelogramLight>(light)) {
+                const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
+                // Perform your calculations for a parallelogram light.
+            }
+        }
 
-    } else {
-        // If shading is disabled, return the albedo of the material.
-        return hitInfo.material.kd;
+        drawRay(ray, total);
+        return total;
     }
+    // If shading is disabled, return the albedo of the material.
+    return hitInfo.material.kd;
 }
