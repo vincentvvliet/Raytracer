@@ -89,6 +89,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
             }
         }
 
+        drawRay(ray, total);
         return total;
     }
     // If shading is disabled, return the albedo of the material.

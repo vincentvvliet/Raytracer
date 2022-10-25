@@ -5,9 +5,9 @@
 #include <iostream>
 
 // Helper to reflect vectors
-glm::vec3 reflect(const glm::vec3& I, const glm::vec3& N)
+glm::vec3 reflect(const glm::vec3& L, const glm::vec3& N)
 {
-    return I - 2 * glm::dot<3, float, glm::qualifier::highp>(I, N) * N;
+    return L - 2 * glm::dot<3, float, glm::qualifier::highp>(L, N) * N;
 }
 
 const glm::vec3 computePhongSpecularity(const glm::vec3& lightPosition, const glm::vec3& lightColor, Ray ray, HitInfo hitInfo)
