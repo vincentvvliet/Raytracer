@@ -9,22 +9,21 @@ DISABLE_WARNINGS_POP()
 #include <cmath>
 #include <limits>
 #include <iostream>
+#include <interpolate.cpp>
+
+// Helper to find normal
+glm::vec3 findNormal(const glm::vec3& v) 
+{       
+    return 
+}
 
 
-bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) {
+bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) 
+{
     // Point in triangle test using barycentric coordinates.
+    glm::vec3 bary = computeBarycentricCoord(v0, v1, v2, p);
 
-    glm::vec3 side_0 = v1 - v0;
-    glm::vec3 side_1 = v2 - v1;
-    glm::vec3 side_2 = v0 - v2;
-    glm::vec3 point_vec_0 = p - v0;
-    glm::vec3 point_vec_1 = p - v1;
-    glm::vec3 point_vec_2 = p - v2;
-
-    float alpha = glm::dot(n, glm::cross(side_0, point_vec_0));
-    float beta = glm::dot(n, glm::cross(side_1, point_vec_1));
-    float gamma = glm::dot(n, glm::cross(side_2, point_vec_2));
-    if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+    if (bary[0] >= 0 && bary[1] >= 0 && bary[2] >= 0) {
         return true;
     }
     
@@ -60,8 +59,19 @@ bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const gl
     Plane plane = trianglePlane(v0, v1, v2);
     float t = ray.t;
     if (intersectRayWithPlane(plane, ray)) {
-        if (pointInTriangle(v0, v1, v2, plane.normal, ray.origin + ray.t * ray.direction)) {
+        glm::vec3 p = ray.origin + ray.t * ray.direction;
+        if (pointInTriangle(v0, v1, v2, plane.normal, p)) {
             // Point must be in triangle, therefore hit
+            std::cout << "plane x " << plane.normal.x << std::endl;
+            std::cout << "plane y " << plane.normal.y << std::endl;
+            std::cout << "plane z " << plane.normal.z << std::endl;
+            glm::vec3 n0 = findNormal(v0);
+            glm::vec3 n1 = findNormal(v1);
+            glm::vec3 n2 = findNormal(v2);
+            glm::vec3 interpolatedNormal = interpolateNormal(n0, n1, n2, computeBarycentricCoord(n0, n1, n2, p));
+            std::cout << "interp x " << interpolatedNormal.x << std::endl;
+            std::cout << "interp y " << interpolatedNormal.y << std::endl;
+            std::cout << "interp z " << interpolatedNormal.z << std::endl;
             hitInfo.normal = plane.normal;
             return true;
         } else {
