@@ -12,6 +12,9 @@ std::vector<glm::uvec3> alltriangles;
 std::vector<Mesh> allmeshes;
 std::vector<int> meshpointer;
 
+std::vector<int> triIdx;
+
+
 BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     : m_pScene(pScene)
 {
@@ -20,20 +23,23 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     // nu alleen gedaan met triangels vgm moet het ook met spheres
     //  TODO: implement BVH construction
     int meshid = 0;
+    int tri = 0;
     for (Mesh m : ourscene.meshes) {
         for (glm::uvec3 t : m.triangles) {
             alltriangles.push_back(t);
+            triIdx.push_back(tri);
             meshpointer.push_back(meshid);
+            tri++;
         }
         allmeshes.push_back(m);
         meshid++;
     }
-    int N = alltriangles.size();
+    int N = tri;
 
     BVHNode& root = nodes[rootNodeId];
-    root.leftchild = 0;
-    root.rigthchild = 0;
-    root.firsttri = 0, root.triCount = 0;
+    root.leftChild = 0;
+    root.rightChild = 0;
+    root.firsttri = 0, root.triCount = N;
     UpdateNodeBounds(rootNodeId);
     subdivide(rootNodeId, 0);
 }
@@ -50,16 +56,38 @@ void UpdateNodeBounds(int NodeId)
     node.aabbMax[2] = std::numeric_limits<float>::min();
 
     for (int first = node.firsttri, i = 0; i < node.triCount; i++) {
-        glm::uvec3& triangle = alltriangles[first + i];
-        int meshid = meshpointer[first + i];
+        int triId = triIdx[first + i];
+        glm::uvec3& triangle = alltriangles[triId];
+        int meshid = meshpointer[triId];
         Mesh mesh = allmeshes[meshid];
-        node.aabbMin[0] = fminf(node.aabbMin[0], mesh.vertices[triangle.x].position[0]);
-        node.aabbMin[1] = fminf(node.aabbMin[1], mesh.vertices[triangle.y].position[1]);
-        node.aabbMin[2] = fminf(node.aabbMin[2], mesh.vertices[triangle.z].position[2]);
 
-        node.aabbMax[0] = fminf(node.aabbMax[0], mesh.vertices[triangle.x].position[0]);
-        node.aabbMax[1] = fminf(node.aabbMax[1], mesh.vertices[triangle.y].position[1]);
-        node.aabbMax[2] = fminf(node.aabbMax[2], mesh.vertices[triangle.z].position[2]);
+
+        node.aabbMin[0] = fminf(node.aabbMin[0], mesh.vertices[triangle.x].position[0]);
+        node.aabbMin[1] = fminf(node.aabbMin[0], mesh.vertices[triangle.x].position[1]);
+        node.aabbMin[2] = fminf(node.aabbMin[0], mesh.vertices[triangle.x].position[2]);
+
+        node.aabbMin[0] = fminf(node.aabbMin[0], mesh.vertices[triangle.y].position[0]);
+        node.aabbMin[1] = fminf(node.aabbMin[0], mesh.vertices[triangle.y].position[1]);
+        node.aabbMin[2] = fminf(node.aabbMin[0], mesh.vertices[triangle.y].position[2]);
+
+        node.aabbMin[0] = fminf(node.aabbMin[0], mesh.vertices[triangle.z].position[0]);
+        node.aabbMin[1] = fminf(node.aabbMin[0], mesh.vertices[triangle.z].position[1]);
+        node.aabbMin[2] = fminf(node.aabbMin[0], mesh.vertices[triangle.z].position[2]);
+
+        
+        
+        node.aabbMax[0] = fmaxf(node.aabbMax[0], mesh.vertices[triangle.x].position[0]);
+        node.aabbMax[1] = fmaxf(node.aabbMax[1], mesh.vertices[triangle.x].position[1]);
+        node.aabbMax[2] = fmaxf(node.aabbMax[2], mesh.vertices[triangle.x].position[2]);
+
+        node.aabbMax[0] = fmaxf(node.aabbMax[0], mesh.vertices[triangle.y].position[0]);
+        node.aabbMax[1] = fmaxf(node.aabbMax[1], mesh.vertices[triangle.y].position[1]);
+        node.aabbMax[2] = fmaxf(node.aabbMax[2], mesh.vertices[triangle.y].position[2]);
+
+        node.aabbMax[0] = fmaxf(node.aabbMax[0], mesh.vertices[triangle.z].position[0]);
+        node.aabbMax[1] = fmaxf(node.aabbMax[1], mesh.vertices[triangle.z].position[1]);
+        node.aabbMax[2] = fmaxf(node.aabbMax[2], mesh.vertices[triangle.z].position[2]);
+
     }
 }
 
@@ -73,6 +101,47 @@ void subdivide(int NodeId, int axis)
     int i = node.firsttri;
     int j = i + node.triCount - 1;
     //--to be implemented--
+    while (i <= j) {
+        //calculate centroid triangle
+        int triId = triIdx[i];
+        glm::uvec3& triangle = alltriangles[triId];
+        int meshid = meshpointer[triId];
+        Mesh mesh = allmeshes[meshid];
+
+        glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
+        +(1.0f / 3.0f) * mesh.vertices[triangle.z].position; 
+
+        if (centroid[axis] < splitPos) {
+            i++;
+        }else {
+            std::swap(triIdx[i], triIdx[j--]);
+        }
+        int leftCount = i-node.firsttri;
+        if (leftCount == 0 || leftCount == node.triCount)
+            return;
+        int leftChildid = nodesUsed++;
+        int rightChildid = nodesUsed++;
+        node.leftChild = leftChildid;
+        nodes[leftChildid].firsttri = node.firsttri;
+        nodes[leftChildid].triCount = leftCount;
+        nodes[rightChildid].firsttri = i;
+        nodes[rightChildid].triCount = node.triCount- leftCount;
+        node.triCount = 0;
+        UpdateNodeBounds(leftChildid);
+        UpdateNodeBounds(rightChildid);
+        if (axis == 0) {
+            subdivide(leftChildid, 1);
+            subdivide(rightChildid, 1);
+        } else if (axis == 1) {
+            subdivide(leftChildid, 2);
+            subdivide(rightChildid, 2);
+        } else if (axis == 2) {
+            subdivide(leftChildid, 0);
+            subdivide(rightChildid, 0);
+        }
+        
+
+    }
     return;
 }
 

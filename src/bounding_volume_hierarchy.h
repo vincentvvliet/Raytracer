@@ -8,15 +8,19 @@
 struct Scene;
 struct BVHNode {
     glm::vec3 aabbMin, aabbMax;
-    int leftchild, rightchild;
+    int leftChild, rightChild;
     int firsttri, triCount;
     bool isLeaf() { return triCount>0;}
 };
+void UpdateNodeBounds(int NodeId);
+void subdivide(int NodeId, int axis);
 
 class BoundingVolumeHierarchy {
 public:
     // Constructor. Receives the scene and builds the bounding volume hierarchy.
     BoundingVolumeHierarchy(Scene* pScene);
+
+    
 
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
