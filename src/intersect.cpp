@@ -12,10 +12,11 @@ DISABLE_WARNINGS_POP()
 #include <interpolate.cpp>
 
 // Helper to find normal
-glm::vec3 findNormal(const glm::vec3& v) 
-{       
-    return 
-}
+//glm::vec3 findNormal(const glm::vec3& v) 
+//{       
+//    // TODO: properly implement normal calculation
+//    return glm::vec3{ v.z, 0, -v.x };
+//}
 
 
 bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) 
@@ -60,19 +61,21 @@ bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const gl
     float t = ray.t;
     if (intersectRayWithPlane(plane, ray)) {
         glm::vec3 p = ray.origin + ray.t * ray.direction;
+
+        /*std::cout << "plane x " << plane.normal.x << std::endl;
+        std::cout << "plane y " << plane.normal.y << std::endl;
+        std::cout << "plane z " << plane.normal.z << std::endl;*/
+        glm::vec3 n0 = plane.normal - v0;
+        glm::vec3 n1 = plane.normal - v1;
+        glm::vec3 n2 = plane.normal - v2;
+        glm::vec3 interpolatedNormal = interpolateNormal(n0, n1, n2, computeBarycentricCoord(n0, n1, n2, p));
+        /*std::cout << "interp x " << interpolatedNormal.x << std::endl;
+        std::cout << "interp y " << interpolatedNormal.y << std::endl;
+        std::cout << "interp z " << interpolatedNormal.z << std::endl;*/
+
         if (pointInTriangle(v0, v1, v2, plane.normal, p)) {
             // Point must be in triangle, therefore hit
-            std::cout << "plane x " << plane.normal.x << std::endl;
-            std::cout << "plane y " << plane.normal.y << std::endl;
-            std::cout << "plane z " << plane.normal.z << std::endl;
-            glm::vec3 n0 = findNormal(v0);
-            glm::vec3 n1 = findNormal(v1);
-            glm::vec3 n2 = findNormal(v2);
-            glm::vec3 interpolatedNormal = interpolateNormal(n0, n1, n2, computeBarycentricCoord(n0, n1, n2, p));
-            std::cout << "interp x " << interpolatedNormal.x << std::endl;
-            std::cout << "interp y " << interpolatedNormal.y << std::endl;
-            std::cout << "interp z " << interpolatedNormal.z << std::endl;
-            hitInfo.normal = plane.normal;
+            hitInfo.normal = plane.normal; // interpolatedNormal;
             return true;
         } else {
             ray.t = t;
