@@ -16,6 +16,11 @@ void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, g
     position = glm::vec3(0.0);
     color = glm::vec3(0.0);
     // TODO: implement this function.
+    float random = rand() / RAND_MAX;
+  
+    position = segmentLight.endpoint0 + ((segmentLight.endpoint1 - segmentLight.endpoint0) * random);
+    color = segmentLight.color0 + ((segmentLight.color1 - segmentLight.color0) * random);
+
 }
 
 // samples a parallelogram light source
@@ -25,6 +30,13 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
     position = glm::vec3(0.0);
     color = glm::vec3(0.0);
     // TODO: implement this function.
+    float random = rand() / RAND_MAX;
+    position = parallelogramLight.v0 + (parallelogramLight.edge01 * random) + parallelogramLight.v0 + (parallelogramLight.edge02 * random);
+    color = parallelogramLight.color0 * (parallelogramLight.edge01 * random) 
+        + parallelogramLight.color1 * (parallelogramLight.edge01 * random) 
+        + parallelogramLight.color2 * (parallelogramLight.edge02 * random) 
+        + parallelogramLight.color3 * (parallelogramLight.edge02 * random);
+
 }
 
 // test the visibility at a given light sample
@@ -32,7 +44,10 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& debugColor, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
     // TODO: implement this function.
-    return 1.0;
+    if (bvh.intersect(ray, hitInfo, features)) {
+           return 0.0f;
+    }
+    return 1.0f;
 }
 
 // given an intersection, computes the contribution from all light sources at the intersection point
@@ -73,19 +88,26 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
     if (features.enableShading) {
         // If shading is enabled, compute the contribution from all lights.
         glm::vec3 total = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::vec3 sample = glm::vec3(1.0f, 1.0f, 1.0f);
         for (const auto& light : scene.lights) {
             if (std::holds_alternative<PointLight>(light)) {
                 const PointLight pointLight = std::get<PointLight>(light);
                 // Perform your calculations for a point light.
                 glm::vec3 intersection = ray.origin + ray.t * ray.direction;
-
+                testVisibilityLightSample(pointLight.position, pointLight.color, bvh, features, ray, hitInfo);
                 total += computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
             } else if (std::holds_alternative<SegmentLight>(light)) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
                 // Perform your calculations for a segment light.
+                for (int i = 0; i < 100; i++) {
+                    sampleSegmentLight(segmentLight, sample, sample);
+                }
             } else if (std::holds_alternative<ParallelogramLight>(light)) {
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
                 // Perform your calculations for a parallelogram light.
+                for (int i = 0; i < 100; i++) {
+                    sampleParallelogramLight(parallelogramLight, sample, sample);
+                }
             }
         }
 
