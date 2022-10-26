@@ -11,23 +11,15 @@ DISABLE_WARNINGS_POP()
 #include <iostream>
 #include <interpolate.cpp>
 
-// Helper to find normal
-//glm::vec3 findNormal(const glm::vec3& v) 
-//{       
-//    // TODO: properly implement normal calculation
-//    return glm::vec3{ v.z, 0, -v.x };
-//}
-
-
-bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) 
+bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p)
 {
     // Point in triangle test using barycentric coordinates.
-    glm::vec3 bary = computeBarycentricCoord(v0, v1, v2, p);
+    glm::vec3 bary = computeBarycentricCoord(v0, v1, v2, p);    
 
     if (bary[0] >= 0 && bary[1] >= 0 && bary[2] >= 0) {
         return true;
     }
-    
+
     return false;
 }
 
@@ -64,12 +56,12 @@ bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const gl
 
         /*std::cout << "plane x " << plane.normal.x << std::endl;
         std::cout << "plane y " << plane.normal.y << std::endl;
-        std::cout << "plane z " << plane.normal.z << std::endl;*/
+        std::cout << "plane z " << plane.normal.z << std::endl;
         glm::vec3 n0 = plane.normal - v0;
         glm::vec3 n1 = plane.normal - v1;
         glm::vec3 n2 = plane.normal - v2;
         glm::vec3 interpolatedNormal = interpolateNormal(n0, n1, n2, computeBarycentricCoord(n0, n1, n2, p));
-        /*std::cout << "interp x " << interpolatedNormal.x << std::endl;
+        std::cout << "interp x " << interpolatedNormal.x << std::endl;
         std::cout << "interp y " << interpolatedNormal.y << std::endl;
         std::cout << "interp z " << interpolatedNormal.z << std::endl;*/
 
