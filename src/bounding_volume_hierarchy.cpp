@@ -31,10 +31,13 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     }
     int N = alltriangles.size();
 
-    BVHNode& root = nodes[rootNodeId];
-    root.leftchild = 0;
-    root.rigthchild = 0;
-    root.firsttri = 0, root.triCount = 0;
+    glm::vec3 aabbMin = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+    glm::vec3 aabbMax = { std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min() };
+
+    
+
+    BVHNode root = {aabbMin, aabbMax, 0, 0, 0, N};
+    nodes.push_back(root);
     UpdateNodeBounds(rootNodeId);
     subdivide(rootNodeId, 0);
 }

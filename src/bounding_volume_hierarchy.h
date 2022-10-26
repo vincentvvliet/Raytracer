@@ -12,7 +12,8 @@ struct BVHNode {
     int firsttri, triCount;
     bool isLeaf() { return triCount>0;}
 };
-
+void UpdateNodeBounds(int rootNodeId);
+void subdivide(int NodeId, int axis);
 class BoundingVolumeHierarchy {
 public:
     // Constructor. Receives the scene and builds the bounding volume hierarchy.
