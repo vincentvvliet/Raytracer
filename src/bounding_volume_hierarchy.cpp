@@ -5,6 +5,7 @@
 #include "scene.h"
 #include "texture.h"
 #include <glm/glm.hpp>
+#include <iostream>
 
 std::vector<BVHNode> nodes;
 int rootNodeId = 0, nodesUsed = 1;

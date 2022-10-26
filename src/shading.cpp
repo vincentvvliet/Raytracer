@@ -5,9 +5,9 @@
 #include <iostream>
 
 // Helper to reflect vectors
-glm::vec3 reflect(const glm::vec3& I, const glm::vec3& N)
+glm::vec3 reflect(const glm::vec3& L, const glm::vec3& N)
 {
-    return I - 2 * glm::dot<3, float, glm::qualifier::highp>(I, N) * N;
+    return L - 2 * glm::dot<3, float, glm::qualifier::highp>(L, N) * N;
 }
 
 const glm::vec3 computePhongSpecularity(const glm::vec3& lightPosition, const glm::vec3& lightColor, Ray ray, HitInfo hitInfo)
@@ -38,8 +38,24 @@ const glm::vec3 computeShading(const glm::vec3& lightPosition, const glm::vec3& 
 
 const Ray computeReflectionRay (Ray ray, HitInfo hitInfo)
 {
-    // Do NOT use glm::reflect!! write your own code.
-    Ray reflectionRay {};
-    // TODO: implement the reflection ray computation.
+    //http://paulbourke.net/geometry/reflected/ 
+    // ks check in getfinalcolour
+ 
+
+    glm::vec3 vecray = glm::normalize(ray.direction);
+    glm::vec3 normal = glm::normalize(hitInfo.normal);
+  
+    Ray reflectionRay
+    {
+ 
+    ray.origin + (ray.direction * ray.t) , 
+    vecray + (normal * (2 * -glm::dot(normal,vecray))), 
+    std::numeric_limits<float>::max() 
+       
+    };
+   
+    
+    // TODO: implement the reflection ray computation
+
     return reflectionRay;
 }
