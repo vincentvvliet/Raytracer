@@ -60,7 +60,7 @@ bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const gl
     Plane plane = trianglePlane(v0, v1, v2);
     float t = ray.t;
     if (intersectRayWithPlane(plane, ray)) {
-        if (pointInTriangle(v0, v1, v2, plane.normal, ray.origin + ray.t * ray.direction)) {
+        if (pointInTriangle(v0, v1, v2, plane.normal, ray.origin + ray.t * ray.direction) && ray.t > 0.00001) {
             // Point must be in triangle, therefore hit
             hitInfo.normal = plane.normal;
             return true;
