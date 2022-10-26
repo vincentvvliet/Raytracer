@@ -43,11 +43,20 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 // returns 1.0 if sample is visible, 0.0 otherwise
 float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& debugColor, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
+    glm::vec3 origin = ray.origin + (ray.t * ray.direction);
+    glm::vec3 shadowdirection = (ray.origin + (ray.t * ray.direction)) + (0.00001f * shadowdirection);
+  
+    Ray sampleray { origin, shadowdirection };
+    HitInfo sampleHit;
     // TODO: implement this function.
-    if (bvh.intersect(ray, hitInfo, features)) {
+    if (bvh.intersect(sampleray, sampleHit, features) ||  ) {
+       
            return 0.0f;
+
+           
     }
     return 1.0f;
+    
 }
 
 // given an intersection, computes the contribution from all light sources at the intersection point
@@ -94,20 +103,23 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 const PointLight pointLight = std::get<PointLight>(light);
                 // Perform your calculations for a point light.
                 glm::vec3 intersection = ray.origin + ray.t * ray.direction;
-                testVisibilityLightSample(pointLight.position, pointLight.color, bvh, features, ray, hitInfo);
+                if (features.enableHardShadow) {
+                    total += testVisibilityLightSample(pointLight.position, pointLight.color, bvh, features, ray, hitInfo) * 
+                        computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
+                }
                 total += computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
             } else if (std::holds_alternative<SegmentLight>(light)) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
                 // Perform your calculations for a segment light.
-                for (int i = 0; i < 100; i++) {
-                    sampleSegmentLight(segmentLight, sample, sample);
-                }
+              /*  for (int i = 0; i < 100; i++) {
+                     sampleSegmentLight(segmentLight, sample, sample);
+                }*/
             } else if (std::holds_alternative<ParallelogramLight>(light)) {
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
                 // Perform your calculations for a parallelogram light.
-                for (int i = 0; i < 100; i++) {
+             /*   for (int i = 0; i < 100; i++) {
                     sampleParallelogramLight(parallelogramLight, sample, sample);
-                }
+                }*/
             }
         }
 
