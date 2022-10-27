@@ -29,10 +29,28 @@ void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm:
 
 // test the visibility at a given light sample
 // returns 1.0 if sample is visible, 0.0 otherwise
-float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3& debugColor, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
+float testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
-    // TODO: implement this function.
-    return 1.0;
+    glm::vec3 intersection = ray.origin + ray.t * ray.direction;
+    glm::vec3 lightVector = glm::normalize(samplePos - intersection);
+    glm::vec3 camVector = glm::normalize(intersection - ray.origin);
+    float distance = glm::distance(intersection, samplePos);
+    HitInfo shadowInfo;
+    Ray shadowRay = Ray { intersection, lightVector, distance };   
+    
+    if (glm::dot(-lightVector, hitInfo.normal) * glm::dot(camVector, hitInfo.normal) >= 0.0f) {
+        if (bvh.intersect(shadowRay, shadowInfo, features) && shadowRay.t < distance) {
+            // Shadow ray intersect, therefore show no colour (return 0.0)
+            drawRay(shadowRay, glm::vec3 { 0.0f, 0.0f, 1.0f });
+            return 0.0f;
+        } else {
+            // No shadow ray intersect, therefore show colour as per usual (return 1.0)
+            drawRay(shadowRay, glm::vec3 { 1.0f, 1.0f, 1.0f });
+            return 1.0f;
+        }
+    } else {
+        return 0.0f;
+    }
 }
 
 // given an intersection, computes the contribution from all light sources at the intersection point
@@ -79,7 +97,12 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 // Perform your calculations for a point light.
                 glm::vec3 intersection = ray.origin + ray.t * ray.direction;
 
-                total += computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
+                float shadowFactor = 1.0f;
+                if (features.enableHardShadow) {
+                    shadowFactor = testVisibilityLightSample(pointLight.position, bvh, features, ray, hitInfo);
+                }
+
+                total += shadowFactor * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
             } else if (std::holds_alternative<SegmentLight>(light)) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
                 // Perform your calculations for a segment light.
