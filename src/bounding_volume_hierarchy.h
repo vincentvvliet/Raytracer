@@ -7,13 +7,14 @@
 // Forward declaration.
 struct Scene;
 struct BVHNode {
-    glm::vec3 aabbMin, aabbMax;
-    int leftChild, rightChild;
+    glm::vec3 aabbMin;
+    glm::vec3 aabbMax;
+    int leftChild;
     int firsttri, triCount;
-    bool isLeaf() { return triCount>0;}
+    bool isLeaf() const { return triCount>0;}
 };
-void UpdateNodeBounds(int NodeId);
-void subdivide(int NodeId, int axis);
+
+
 
 class BoundingVolumeHierarchy {
 public:
@@ -22,11 +23,20 @@ public:
 
     
 
+    
+    void LevelNodes(int NodeId, std::vector<BVHNode>& resultarray, int currentlevel, int level);
+    int tree_height(int NodeId);
+    
+
+    void UpdateNodeBounds(int NodeId);
+    void subdivide(int NodeId, int axis);
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
 
     // Return how many leaf nodes there are in the tree that you have constructed.
     [[nodiscard]] int numLeaves() const;
+    
+
 
     // Visual Debug 1: Draw the bounding boxes of the nodes at the selected level.
     void debugDrawLevel(int level);
@@ -44,4 +54,13 @@ private:
     int m_numLevels;
     int m_numLeaves;
     Scene* m_pScene;
+    std::vector<BVHNode> nodes;
+    std::vector<int> triIdx;
+    std::vector<glm::uvec3> alltriangles;
+    int nodesUsed = 1;
+
+    std::vector<Mesh> allmeshes;
+    std::vector<int> meshpointer;
+
+    int level;
 };
