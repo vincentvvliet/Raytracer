@@ -7,7 +7,10 @@ DISABLE_WARNINGS_PUSH()
 DISABLE_WARNINGS_POP()
 #include <cmath>
 #include <iostream>
+#include <tuple>
 
+int segmentLightPoints = 10;
+int parallelogramLightPoints = 100;
 
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
@@ -20,22 +23,57 @@ void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, g
   
     position = segmentLight.endpoint0 + ((segmentLight.endpoint1 - segmentLight.endpoint0) * random);
     color = segmentLight.color0 + ((segmentLight.color1 - segmentLight.color0) * random);
+}
 
+
+std::list<PointLight> interpolate(const ParallelogramLight& light, std::list<PointLight> points, int sqrtSampleCount, glm::vec3 v1, glm::vec3 v2, float ratio_x, float ratio_y, float dist_x, float dist_y)
+{
+    // Uses bilinear interpolation for samples
+    for (int i = 0; i <= sqrtSampleCount; i++) {
+        float x1 = (light.v0.x - v1.x) * (ratio_x * i) + v1.x;
+        float y1 = (light.v0.y - v1.y) * (ratio_x * i) + v1.y;
+        float z1 = (light.v0.z - v1.z) * (ratio_x * i) + v1.z;
+        glm::vec3 point1 = glm::vec3 { x1, y1, z1 };
+        float alpha = (float)glm::distance(light.v0, point1) / dist_x;
+        for (int j = 0; j <= sqrtSampleCount; j++) {
+            glm::vec3 color1 = (1 - alpha) * light.color0 + (alpha)*light.color1;
+            glm::vec3 color2 = (1 - alpha) * light.color2 + (alpha)*light.color3;
+            float x2 = (light.v0.x - v2.x) * (ratio_y * j) + v2.x;
+            float y2 = (light.v0.y - v2.y) * (ratio_y * j) + v2.y;
+            float z2 = (light.v0.z - v2.z) * (ratio_y * j) + v2.z;
+            glm::vec3 point2 = glm::vec3 { x2, y2, z2 };
+            float beta = (float)glm::distance(light.v0, point2) / dist_y;
+            glm::vec3 finalColor = (1 - beta) * color2 + (beta) * color1;
+            float final_x = -(light.v0.x - v2.x) * (ratio_y * j) + point1.x;
+            float final_y = -(light.v0.y - v2.y) * (ratio_y * j) + point1.y;
+            float final_z = -(light.v0.z - v2.z) * (ratio_y * j) + point1.z;
+
+            points.insert(points.begin(), PointLight(glm::vec3(final_x, final_y, final_z), finalColor));
+        }
+    }
+
+    return points;
 }
 
 // samples a parallelogram light source
 // you should fill in the vectors position and color with the sampled position and color
-void sampleParallelogramLight(const ParallelogramLight& parallelogramLight, glm::vec3& position, glm::vec3& color)
+std::list<PointLight> sampleParallelogramLight(const ParallelogramLight& parallelogramLight, std::list<PointLight> parallelogramPoints, glm::vec3& position, glm::vec3& color)
 {
-    position = glm::vec3(0.0);
-    color = glm::vec3(0.0);
-    // TODO: implement this function.
-    float random = rand() / RAND_MAX;
-    position = parallelogramLight.v0 + (parallelogramLight.edge01 * random) + parallelogramLight.v0 + (parallelogramLight.edge02 * random);
-    color = parallelogramLight.color0 * (parallelogramLight.edge01 * random) 
-        + parallelogramLight.color1 * (parallelogramLight.edge01 * random) 
-        + parallelogramLight.color2 * (parallelogramLight.edge02 * random) 
-        + parallelogramLight.color3 * (parallelogramLight.edge02 * random);
+    glm::vec3 v1 = parallelogramLight.v0 + parallelogramLight.edge01;
+    glm::vec3 v2 = parallelogramLight.v0 + parallelogramLight.edge02;
+
+    int sqrtSampleCount = int(std::sqrt(parallelogramLightPoints));
+
+    float dist_x = glm::distance(parallelogramLight.v0, v1);
+    float dist_y = glm::distance(parallelogramLight.v0, v2);
+    float normalizedDist_x = dist_x / sqrtSampleCount;
+    float normalizedDist_y = dist_y / sqrtSampleCount;
+
+    // Percentage in x and y directions
+    float ratio_x = normalizedDist_x / dist_x;
+    float ratio_y = normalizedDist_y / dist_y;
+
+    return interpolate(parallelogramLight, parallelogramPoints, sqrtSampleCount, v1, v2, ratio_x, ratio_y, dist_x, dist_y);
 
 }
 
@@ -104,12 +142,11 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
         // If shading is enabled, compute the contribution from all lights.
         glm::vec3 total = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 sample = glm::vec3(1.0f, 1.0f, 1.0f);
+        glm::vec3 intersection = ray.origin + ray.t * ray.direction;
         for (const auto& light : scene.lights) {
             if (std::holds_alternative<PointLight>(light)) {
                 const PointLight pointLight = std::get<PointLight>(light);
                 // Perform your calculations for a point light.
-                glm::vec3 intersection = ray.origin + ray.t * ray.direction;
-
                 float shadowFactor = 1.0f;
                 if (features.enableHardShadow) {
                     shadowFactor = testVisibilityLightSample(pointLight.position, bvh, features, ray, hitInfo);
@@ -119,15 +156,31 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
             } else if (std::holds_alternative<SegmentLight>(light)) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
                 // Perform your calculations for a segment light.
-              /*  for (int i = 0; i < 100; i++) {
-                     sampleSegmentLight(segmentLight, sample, sample);
-                }*/
+                for (int i = 0; i < 100; i++) {
+                    sampleSegmentLight(segmentLight, sample, sample);
+                }
             } else if (std::holds_alternative<ParallelogramLight>(light)) {
+                // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
-                // Perform your calculations for a parallelogram light.
-             /*   for (int i = 0; i < 100; i++) {
-                    sampleParallelogramLight(parallelogramLight, sample, sample);
-                }*/
+                std::list<PointLight> points;
+                int sqrtSampleCount = int(std::sqrt(parallelogramLightPoints));
+
+                points = sampleParallelogramLight(parallelogramLight, points, sample, sample);
+
+                glm::vec3 color = glm::vec3(0.0f, 0.0f, 0.0f);
+
+                // interate over the sampled points and add all the colors together
+                for (std::list<PointLight>::iterator it = points.begin(); it != points.end(); it++) {
+                    // If in shadow, apply shadowFactor
+                    PointLight light = *it;
+                    float shadowFactor = testVisibilityLightSample(light.position, bvh, features, ray, hitInfo);
+                    if (shadowFactor == 1.0f) {
+                        color += shadowFactor * computeShading(light.position, light.color, features, ray, hitInfo);
+                    }
+                }
+
+                float denom = (sqrtSampleCount + 1) * (sqrtSampleCount + 1);
+                total += color / glm::vec3 { sqrtSampleCount * sqrtSampleCount, sqrtSampleCount * sqrtSampleCount, sqrtSampleCount * sqrtSampleCount };
             }
         }
 
