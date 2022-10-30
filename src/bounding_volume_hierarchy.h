@@ -49,6 +49,9 @@ public:
     // is on the correct side of the origin (the new t >= 0).
     bool intersect(Ray& ray, HitInfo& hitInfo, const Features& features) const;
 
+    bool intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const;
+
+
 
 private:
     int m_numLevels;

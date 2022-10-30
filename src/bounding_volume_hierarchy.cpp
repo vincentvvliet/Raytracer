@@ -289,6 +289,36 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         // TODO: implement here the bounding volume hierarchy traversal.
         // Please note that you should use `features.enableNormalInterp` and `features.enableTextureMapping`
         // to isolate the code that is only needed for the normal interpolation and texture mapping features.
-        return false;
+        return intersectBVH(ray,hitInfo, 0);
+   
+    }
+}
+
+bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const 
+{
+    BVHNode node = nodes[NodeId];
+    AxisAlignedBox aabb { node.aabbMin, node.aabbMax };
+    if (!intersectRayWithShape(aabb, ray)) { return false;}
+    if (node.isLeaf()) {
+        for (int i = 0; i < node.triCount; i++) {
+            int triId = triIdx[node.firsttri + i];
+            glm::uvec3 triangle = alltriangles[triId];
+            int meshid = meshpointer[triId];
+            Mesh mesh = allmeshes[meshid];
+            glm::vec3 v0 = mesh.vertices[triangle.x].position;
+            glm::vec3 v1 = mesh.vertices[triangle.y].position;
+            glm::vec3 v2 = mesh.vertices[triangle.z].position;
+            intersectRayWithTriangle(v0, v1, v2, ray, hitInfo);
+            hitInfo.material = mesh.material;
+            return true;    
+        }
+            
+            
+
+            
+    }
+    
+    else {
+        return intersectBVH(ray, hitInfo, node.leftChild)||intersectBVH(ray, hitInfo, node.leftChild + 1);
     }
 }
