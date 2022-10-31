@@ -90,8 +90,36 @@ void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
         return;
     }
        
-    glm::vec3 extent = node.aabbMax - node.aabbMin;
-    float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
+    /*glm::vec3 extent = node.aabbMax - node.aabbMin;
+    float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;*/
+
+    //SAH
+    int bestAxis = -1;
+    float bestPos = 0, bestCost = std::numeric_limits<float>::max();
+    for (int axis1 = 0; axis1 < 3; axis1++) {
+        for (int i = 0; i < node.triCount; i++) {
+            int triId = triIdx[i];
+            glm::uvec3& triangle = alltriangles[triId];
+            int meshid = meshpointer[triId];
+            Mesh mesh = allmeshes[meshid];
+
+            glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
+                + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
+
+            float candidatePos = centroid[axis1];
+            float cost = EvaluateSAH(node, axis1, candidatePos);
+
+            if (cost < bestCost) {
+                bestPos = candidatePos;
+                bestAxis = axis1;
+                bestCost = cost;
+            }
+        }
+    }
+
+    int axis1 = bestAxis;
+    float splitPos = bestPos;
+
     int i = node.firsttri;
     int j = i + node.triCount - 1;
     //--to be implemented--
@@ -149,6 +177,35 @@ void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
 return;
 }
 
+float BoundingVolumeHierarchy::EvaluateSAH(BVHNode node, int axis, float pos) {
+    aabSAHHelper leftbox, rightbox;
+    int leftCount = 0, rightCount = 0;
+    for (int i = 0; i < node.triCount; i++) {
+        int triId = triIdx[i];
+        glm::uvec3& triangle = alltriangles[triId];
+        int meshid = meshpointer[triId];
+        Mesh mesh = allmeshes[meshid];
+
+        glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
+            + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
+
+        if (centroid[axis] < pos) {
+            leftCount++;
+            leftbox.grow(mesh.vertices[triangle.x].position);
+            leftbox.grow(mesh.vertices[triangle.y].position);
+            leftbox.grow(mesh.vertices[triangle.z].position);
+        } else {
+            rightCount++;
+            rightbox.grow(mesh.vertices[triangle.x].position);
+            rightbox.grow(mesh.vertices[triangle.y].position);
+            rightbox.grow(mesh.vertices[triangle.z].position);
+        }
+
+
+    }
+    float cost = leftCount * leftbox.area() + rightCount * rightbox.area();
+    return cost > 0 ? cost : std::numeric_limits<float>::max();
+}
 
 
 // Return the depth of the tree that you constructed. This is used to tell the

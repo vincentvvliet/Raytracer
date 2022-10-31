@@ -14,6 +14,25 @@ struct BVHNode {
     bool isLeaf() const { return triCount>0;}
 };
 
+struct aabSAHHelper {
+    glm::vec3 aabbMin = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+    glm::vec3 aabbMax = { std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min() };
+    void grow(glm::vec3 p) {
+        aabbMin[0] = fminf(aabbMin[0], p[0]);
+        aabbMin[1] = fminf(aabbMin[1], p[1]);
+        aabbMin[2] = fminf(aabbMin[2], p[2]);
+
+        aabbMax[0] = fmaxf(aabbMax[0], p[0]);
+        aabbMax[1] = fmaxf(aabbMax[1], p[1]);
+        aabbMax[2] = fmaxf(aabbMax[2], p[2]);
+    }
+
+    float area() {
+        glm::vec3 extent = aabbMax - aabbMin;
+        return extent[0] * extent[1] + extent[1] * extent[2] + extent[2] * extent[0];
+    }
+};
+
 
 
 class BoundingVolumeHierarchy {
@@ -30,6 +49,7 @@ public:
 
     void UpdateNodeBounds(int NodeId);
     void subdivide(int NodeId, int axis);
+    float EvaluateSAH(BVHNode node, int axis1, float pos);
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
 
