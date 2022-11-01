@@ -14,15 +14,24 @@ int parallelogramLightPoints = 100;
 
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
-void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, glm::vec3& color)
+std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, glm::vec3& color)
 {
-    position = glm::vec3(0.0);
-    color = glm::vec3(0.0);
+    
+    std::list<PointLight> segmentLights;
+   
+    for (int i = 0; i <= segmentLightPoints; i++) {
+        position = glm::vec3(0.0);
+        color = glm::vec3(0.0);
+        float random = rand() / RAND_MAX;
+
+        position = segmentLight.endpoint0 + ((segmentLight.endpoint1 - segmentLight.endpoint0) * random);
+        color = segmentLight.color0 + ((segmentLight.color1 - segmentLight.color0) * random);
+        segmentLights.insert(segmentLights.begin(), PointLight(position, color));
+    }
+   
     // TODO: implement this function.
-    float random = rand() / RAND_MAX;
-  
-    position = segmentLight.endpoint0 + ((segmentLight.endpoint1 - segmentLight.endpoint0) * random);
-    color = segmentLight.color0 + ((segmentLight.color1 - segmentLight.color0) * random);
+   
+    return segmentLights;
 }
 
 
@@ -143,23 +152,42 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
         glm::vec3 total = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 sample = glm::vec3(1.0f, 1.0f, 1.0f);
         glm::vec3 intersection = ray.origin + ray.t * ray.direction;
+        std::list<PointLight> segmentPoints; 
         for (const auto& light : scene.lights) {
             if (std::holds_alternative<PointLight>(light)) {
                 const PointLight pointLight = std::get<PointLight>(light);
                 // Perform your calculations for a point light.
                 float shadowFactor = 1.0f;
+                float transparency = 1.0f;
+               
                 if (features.enableHardShadow) {
                     shadowFactor = testVisibilityLightSample(pointLight.position, bvh, features, ray, hitInfo);
+                    
+                }
+                total += shadowFactor * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);              
+           
+            } else if (std::holds_alternative<SegmentLight>(light) && features.enableSoftShadow) {
+                const SegmentLight segmentLight = std::get<SegmentLight>(light);
+                std::list<PointLight> linepoints;
+                
+                linepoints = sampleSegmentLight(segmentLight,sample,sample);
+                glm::vec3 color = glm::vec3(0.0f, 0.0f, 0.0f);
+                
+                // interate over the sampled points and add all the colors together
+                for (std::list<PointLight>::iterator it = linepoints.begin(); it != linepoints.end(); it++) {
+                    // If in shadow, apply shadowFactor
+                    PointLight light = *it;
+                    float shadowFactor = testVisibilityLightSample(light.position, bvh, features, ray, hitInfo);
+                    if (shadowFactor == 1.0f) {
+                        color += shadowFactor * computeShading(light.position, light.color, features, ray, hitInfo);
+                    }
                 }
 
-                total += shadowFactor * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
-            } else if (std::holds_alternative<SegmentLight>(light)) {
-                const SegmentLight segmentLight = std::get<SegmentLight>(light);
-                // Perform your calculations for a segment light.
-                for (int i = 0; i < 100; i++) {
-                    sampleSegmentLight(segmentLight, sample, sample);
-                }
-            } else if (std::holds_alternative<ParallelogramLight>(light)) {
+                
+                total += color / glm::vec3 { segmentLightPoints, segmentLightPoints , segmentLightPoints  };
+                
+
+            } else if (std::holds_alternative<ParallelogramLight>(light) && features.enableSoftShadow) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
                 std::list<PointLight> points;
