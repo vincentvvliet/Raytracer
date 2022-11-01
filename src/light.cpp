@@ -112,7 +112,7 @@ float testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& 
     }
 }
 
-// given an intersection, computes the contribution from all light sources at the intersection point
+    // given an intersection, computes the contribution from all light sources at the intersection point
 // in this method you should cycle the light sources and for each one compute their contribution
 // don't forget to check for visibility (shadows!)
 
@@ -157,14 +157,19 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
             if (std::holds_alternative<PointLight>(light)) {
                 const PointLight pointLight = std::get<PointLight>(light);
                 // Perform your calculations for a point light.
-                float shadowFactor = 1.0f;
                 float transparency = 1.0f;
-               
-                if (features.enableHardShadow) {
-                    shadowFactor = testVisibilityLightSample(pointLight.position, bvh, features, ray, hitInfo);
+                total = computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
+              if (features.enableHardShadow) {
+                    transparency = testVisibilityLightSample(pointLight.position, bvh, features, ray, hitInfo);
+                    
+                    if (features.extra.enableTransparency) {
+                        if (transparency == 0.0f) {
+                            transparency = hitInfo.material.transparency;
+                        }
+                    }
                     
                 }
-                total += shadowFactor * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);              
+                total = total +  transparency * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);              
            
             } else if (std::holds_alternative<SegmentLight>(light) && features.enableSoftShadow) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);

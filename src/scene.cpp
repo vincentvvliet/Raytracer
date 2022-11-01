@@ -82,7 +82,7 @@ Scene loadScenePrebuilt(SceneType type, const std::filesystem::path& dataDir)
         auto subMeshes = loadMesh(dataDir / "custom.obj");
         std::move(std::begin(subMeshes), std::end(subMeshes), std::back_inserter(scene.meshes));
         // === CHANGE THE LIGHTING IF DESIRED ===
-        scene.lights.emplace_back(PointLight { glm::vec3(-1, 1, -1), glm::vec3(1) });
+        scene.lights.emplace_back(PointLight { glm::vec3(0.5, 1.5, 2.2), glm::vec3(1) });
         // Spherical light: position, radius, color
         // scene.lights.push_back(SphericalLight{ glm::vec3(0, 1.5f, 0), 0.2f, glm::vec3(1) });
     } break;
