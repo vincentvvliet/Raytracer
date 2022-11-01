@@ -14,24 +14,22 @@ int parallelogramLightPoints = 100;
 
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
-std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, glm::vec3& color)
+std::list<PointLight> interpolateLine(const SegmentLight& light, std::list<PointLight> points, int segmentLightPoints) {
+    for (int i = 0; i < segmentLightPoints; i++) {
+        
+        float random = rand() / RAND_MAX;
+        glm::vec3 point = light.endpoint0 + ((light.endpoint1 - light.endpoint0) * random);
+        glm::vec3 colour = light.color0 + ((light.color1 - light.color0) * random);
+        points.insert(points.begin(), PointLight(point, colour));
+        
+    }
+    return points;
+}
+    std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight, std::list<PointLight> points,glm::vec3& position, glm::vec3& color)
 {
     
-    std::list<PointLight> segmentLights;
    
-    for (int i = 0; i <= segmentLightPoints; i++) {
-        position = glm::vec3(0.0);
-        color = glm::vec3(0.0);
-        float random = rand() / RAND_MAX;
-
-        position = segmentLight.endpoint0 + ((segmentLight.endpoint1 - segmentLight.endpoint0) * random);
-        color = segmentLight.color0 + ((segmentLight.color1 - segmentLight.color0) * random);
-        segmentLights.insert(segmentLights.begin(), PointLight(position, color));
-    }
-   
-    // TODO: implement this function.
-   
-    return segmentLights;
+    return interpolateLine(segmentLight,points,segmentLightPoints);
 }
 
 
@@ -170,7 +168,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
                 std::list<PointLight> linepoints;
                 
-                linepoints = sampleSegmentLight(segmentLight,sample,sample);
+                linepoints = sampleSegmentLight(segmentLight,linepoints,sample,sample);
                 glm::vec3 color = glm::vec3(0.0f, 0.0f, 0.0f);
                 
                 // interate over the sampled points and add all the colors together
