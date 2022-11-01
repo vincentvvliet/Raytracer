@@ -6,7 +6,7 @@
 #include "texture.h"
 #include <glm/glm.hpp>
 #include <iostream>
-
+#include <stack>
 
 BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     : m_pScene(pScene)
@@ -90,35 +90,35 @@ void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
         return;
     }
        
-    /*glm::vec3 extent = node.aabbMax - node.aabbMin;
-    float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;*/
+    glm::vec3 extent = node.aabbMax - node.aabbMin;
+    float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
 
     //SAH
-    int bestAxis = -1;
-    float bestPos = 0, bestCost = std::numeric_limits<float>::max();
-    for (int axis1 = 0; axis1 < 3; axis1++) {
-        for (int i = 0; i < node.triCount; i++) {
-            int triId = triIdx[i];
-            glm::uvec3& triangle = alltriangles[triId];
-            int meshid = meshpointer[triId];
-            Mesh mesh = allmeshes[meshid];
+    //int bestAxis = -1;
+    //float bestPos = 0, bestCost = std::numeric_limits<float>::max();
+    //for (int axis1 = 0; axis1 < 3; axis1++) {
+    //    for (int i = 0; i < node.triCount; i++) {
+    //        int triId = triIdx[i];
+    //        glm::uvec3& triangle = alltriangles[triId];
+    //        int meshid = meshpointer[triId];
+    //        Mesh mesh = allmeshes[meshid];
 
-            glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
-                + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
+    //        glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
+    //            + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
 
-            float candidatePos = centroid[axis1];
-            float cost = EvaluateSAH(node, axis1, candidatePos);
+    //        float candidatePos = centroid[axis1];
+    //        float cost = EvaluateSAH(node, axis1, candidatePos);
 
-            if (cost < bestCost) {
-                bestPos = candidatePos;
-                bestAxis = axis1;
-                bestCost = cost;
-            }
-        }
-    }
+    //        if (cost < bestCost) {
+    //            bestPos = candidatePos;
+    //            bestAxis = axis1;
+    //            bestCost = cost;
+    //        }
+    //    }
+    //}
 
-    int axis1 = bestAxis;
-    float splitPos = bestPos;
+    //int axis1 = bestAxis;
+    //float splitPos = bestPos;
 
     int i = node.firsttri;
     int j = i + node.triCount - 1;
@@ -177,35 +177,6 @@ void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
 return;
 }
 
-float BoundingVolumeHierarchy::EvaluateSAH(BVHNode node, int axis, float pos) {
-    aabSAHHelper leftbox, rightbox;
-    int leftCount = 0, rightCount = 0;
-    for (int i = 0; i < node.triCount; i++) {
-        int triId = triIdx[i];
-        glm::uvec3& triangle = alltriangles[triId];
-        int meshid = meshpointer[triId];
-        Mesh mesh = allmeshes[meshid];
-
-        glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
-            + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
-
-        if (centroid[axis] < pos) {
-            leftCount++;
-            leftbox.grow(mesh.vertices[triangle.x].position);
-            leftbox.grow(mesh.vertices[triangle.y].position);
-            leftbox.grow(mesh.vertices[triangle.z].position);
-        } else {
-            rightCount++;
-            rightbox.grow(mesh.vertices[triangle.x].position);
-            rightbox.grow(mesh.vertices[triangle.y].position);
-            rightbox.grow(mesh.vertices[triangle.z].position);
-        }
-
-
-    }
-    float cost = leftCount * leftbox.area() + rightCount * rightbox.area();
-    return cost > 0 ? cost : std::numeric_limits<float>::max();
-}
 
 
 // Return the depth of the tree that you constructed. This is used to tell the
@@ -351,31 +322,58 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
     }
 }
 
-bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const 
+bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const
 {
-    BVHNode node = nodes[NodeId];
-    AxisAlignedBox aabb { node.aabbMin, node.aabbMax };
-    if (!intersectRayWithShape(aabb, ray)) { return false;}
-    if (node.isLeaf()) {
-        for (int i = 0; i < node.triCount; i++) {
-            int triId = triIdx[node.firsttri + i];
-            glm::uvec3 triangle = alltriangles[triId];
-            int meshid = meshpointer[triId];
-            Mesh mesh = allmeshes[meshid];
-            glm::vec3 v0 = mesh.vertices[triangle.x].position;
-            glm::vec3 v1 = mesh.vertices[triangle.y].position;
-            glm::vec3 v2 = mesh.vertices[triangle.z].position;
-            intersectRayWithTriangle(v0, v1, v2, ray, hitInfo);
-            hitInfo.material = mesh.material;
-            return true;    
-        }
-            
-            
+    std::stack<BVHNode> stack;
+    stack.push(nodes[NodeId]);
+    float t = ray.t;
+    while (!stack.empty()) {
+        BVHNode curnode = stack.top();
+        //For debugging
+        //AxisAlignedBox aabb { curnode.aabbMin, curnode.aabbMax };
+        //drawAABB(aabb, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.1f);
+        stack.pop();
+        if (curnode.isLeaf()) {
+            for (int i = 0; i < curnode.triCount; i++) {
+                int triId = triIdx[curnode.firsttri + i];
+                glm::uvec3 triangle = alltriangles[triId];
+                int meshid = meshpointer[triId];
+                Mesh mesh = allmeshes[meshid];
+                const auto v0 = mesh.vertices[triangle.x];
+                const auto v1 = mesh.vertices[triangle.y];
+                const auto v2 = mesh.vertices[triangle.z];
+                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
+                    hitInfo.material = mesh.material;
+                }
+            }
+        } else {
+            BVHNode leftnode = nodes[curnode.leftChild];
+            BVHNode rightnode = nodes[curnode.leftChild + 1];
 
-            
+            AxisAlignedBox aabbleft { leftnode.aabbMin, leftnode.aabbMax };
+            AxisAlignedBox aabbright { rightnode.aabbMin, rightnode.aabbMax };
+
+            Ray leftray = ray;
+            Ray rightray = ray;
+            if (intersectRayWithShape(aabbleft, leftray) && intersectRayWithShape(aabbright, rightray)) {
+                if (leftray.t > rightray.t) {
+                    stack.push(rightnode);
+                    stack.push(leftnode);
+                } else {
+                    stack.push(leftnode);
+                    stack.push(rightnode);
+                }
+            } else if (intersectRayWithShape(aabbleft, leftray) && !intersectRayWithShape(aabbright, rightray)) {
+                stack.push(leftnode);
+            } else if (!intersectRayWithShape(aabbleft, leftray) && intersectRayWithShape(aabbright, rightray)) {
+                stack.push(rightnode);
+            }
+            continue;
+        }
     }
-    
-    else {
-        return intersectBVH(ray, hitInfo, node.leftChild)||intersectBVH(ray, hitInfo, node.leftChild + 1);
+    if (ray.t < t) {
+        return true;
+    } else {
+        return false;
     }
 }
