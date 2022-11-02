@@ -47,24 +47,24 @@ Plane trianglePlane(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v
 
 /// Input: the three vertices of the triangle
 /// Output: if intersects then modify the hit parameter ray.t and return true, otherwise return false
-bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, Ray& ray, HitInfo& hitInfo)
+bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, Ray& ray, HitInfo& hitInfo, Features features)
 {    
     Plane plane = trianglePlane(v0, v1, v2);
     float t = ray.t;
     if (intersectRayWithPlane(plane, ray)) {
         glm::vec3 p = ray.origin + ray.t * ray.direction;
 
-        glm::vec3 n0 = v0 + plane.normal; 
-        glm::vec3 n1 = v1 + plane.normal;
-        glm::vec3 n2 = v2 + plane.normal;
-        glm::vec3 interpolatedNormal = interpolateNormal(n0, n1, n2, computeBarycentricCoord(v0, v1, v2, p));
-        /*std::cout << "interp x " << interpolatedNormal.x << std::endl;
-        std::cout << "interp y " << interpolatedNormal.y << std::endl;
-        std::cout << "interp z " << interpolatedNormal.z << std::endl;*/
+        glm::vec3 normal = plane.normal;
+        if (features.enableNormalInterp) {
+            glm::vec3 n0 = v0 + plane.normal;
+            glm::vec3 n1 = v1 + plane.normal;
+            glm::vec3 n2 = v2 + plane.normal;
+            normal = interpolateNormal(n0, n1, n2, computeBarycentricCoord(v0, v1, v2, p));
+        }
 
         if (pointInTriangle(v0, v1, v2, plane.normal, p)) {
             // Point must be in triangle, therefore hit
-            hitInfo.normal = interpolatedNormal; // plane.normal;
+            hitInfo.normal = normal;
             return true;
         } else {
             ray.t = t;
