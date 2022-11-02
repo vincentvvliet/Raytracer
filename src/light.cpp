@@ -24,15 +24,11 @@ std::list<PointLight> interpolateLine(const SegmentLight& light, std::list<Point
         points.insert(points.begin(),PointLight(position,color));
     }
 
-
     return points;
-
 }
   
 std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight, std::list<PointLight> points,glm::vec3& position, glm::vec3& color)
-{
-    
-   
+{   
     return interpolateLine(segmentLight,points,segmentLightPoints);
 }
 
@@ -41,24 +37,15 @@ std::list<PointLight> interpolate(const ParallelogramLight& light, std::list<Poi
 {
     // Uses bilinear interpolation for samples
     for (int i = 0; i <= sqrtSampleCount; i++) {
-        /*float x1 = (light.v0.x - v1.x) * (ratio * i) + v1.x;
-        float y1 = (light.v0.y - v1.y) * (ratio * i) + v1.y;
-        float z1 = (light.v0.z - v1.z) * (ratio * i) + v1.z;*/
         glm::vec3 point1 = (light.v0 - v1) * (ratio * i) + v1;
         float alpha = (float)glm::distance(light.v0, point1) / dist_x;
         for (int j = 0; j <= sqrtSampleCount; j++) {
             glm::vec3 color1 = (1 - alpha) * light.color0 + (alpha)*light.color1;
             glm::vec3 color2 = (1 - alpha) * light.color2 + (alpha)*light.color3;
-            /*float x2 = (light.v0.x - v2.x) * (ratio * j) + v2.x;
-            float y2 = (light.v0.y - v2.y) * (ratio * j) + v2.y;
-            float z2 = (light.v0.z - v2.z) * (ratio * j) + v2.z;*/
             glm::vec3 point2 = (light.v0 - v2) * (ratio * j) + v2;
             float beta = (float)glm::distance(light.v0, point2) / dist_y;
             glm::vec3 finalColor = (1 - beta) * color2 + (beta) * color1;
             glm::vec3 finalPoint = -(light.v0 - v2) * (ratio * j) + point1;
-            /*float final_x = -(light.v0.x - v2.x) * (ratio * j) + point1.x;
-            float final_y = -(light.v0.y - v2.y) * (ratio * j) + point1.y;
-            float final_z = -(light.v0.z - v2.z) * (ratio * j) + point1.z;*/
 
             points.insert(points.begin(), PointLight(finalPoint, finalColor));
         }
@@ -159,7 +146,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 float transparency = 1.0f;
                
                 if (features.enableHardShadow) {
-                    shadowFactor = testVisibilityLightSample(pointLight.position, bvh, features, ray, hitInfo);
+                    shadowFactor = testVisibilityLightSample(pointLight.position, glm::vec3 { 1.0f, 0.0f, 0.0f }, bvh, features, ray, hitInfo);
                 }
                 total += shadowFactor * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);              
            
@@ -174,16 +161,13 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 for (std::list<PointLight>::iterator it = linepoints.begin(); it != linepoints.end(); it++) {
                     // If in shadow, apply shadowFactor
                     PointLight light = *it;
-                    float shadowFactor = testVisibilityLightSample(light.position, bvh, features, ray, hitInfo);
+                    float shadowFactor = testVisibilityLightSample(light.position, glm::vec3 { 1.0f, 0.0f, 0.0f }, bvh, features, ray, hitInfo);
                     if (shadowFactor == 1.0f) {
                         color += shadowFactor * computeShading(light.position, light.color, features, ray, hitInfo);
                     }
                 }
 
-                
-                total += color / glm::vec3 { sqrt(50), sqrt(50) , sqrt(50) };
-                
-
+                total += color / glm::vec3 { sqrt(50), sqrt(50) , sqrt(50) }
             } else if (std::holds_alternative<ParallelogramLight>(light) && features.enableSoftShadow) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
