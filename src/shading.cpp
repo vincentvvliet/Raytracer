@@ -17,6 +17,8 @@ const glm::vec3 computePhongSpecularity(const glm::vec3& lightPosition, const gl
     glm::vec3 lightDirection = (lightPosition - vertexPosition);
     glm::vec3 R = reflect(-lightDirection, hitInfo.normal);
     glm::vec3 V = glm::normalize(ray.origin - vertexPosition);
+    if (glm::dot(R, -V) < 1)
+        return { 0.0f, 0.0f, 0.0f };
     return lightColor * hitInfo.material.ks * pow(fmax(dot(V, R), 0.0f), hitInfo.material.shininess);
 }
 
