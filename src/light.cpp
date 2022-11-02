@@ -16,6 +16,32 @@ void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, g
     position = glm::vec3(0.0);
     color = glm::vec3(0.0);
     // TODO: implement this function.
+    float random = rand() / RAND_MAX;
+  
+    position = segmentLight.endpoint0 + ((segmentLight.endpoint1 - segmentLight.endpoint0) * random);
+    color = segmentLight.color0 + ((segmentLight.color1 - segmentLight.color0) * random);
+}
+
+
+std::list<PointLight> interpolate(const ParallelogramLight& light, std::list<PointLight> points, int sqrtSampleCount, glm::vec3 v1, glm::vec3 v2, float ratio, float dist_x, float dist_y)
+{
+    // Uses bilinear interpolation for samples
+    for (int i = 0; i <= sqrtSampleCount; i++) {
+        glm::vec3 point1 = (light.v0 - v1) * (ratio * i) + v1;
+        float alpha = (float)glm::distance(light.v0, point1) / dist_x;
+        for (int j = 0; j <= sqrtSampleCount; j++) {
+            glm::vec3 color1 = (1 - alpha) * light.color0 + (alpha)*light.color1;
+            glm::vec3 color2 = (1 - alpha) * light.color2 + (alpha)*light.color3;
+            glm::vec3 point2 = (light.v0 - v2) * (ratio * j) + v2;
+            float beta = (float)glm::distance(light.v0, point2) / dist_y;
+            glm::vec3 finalColor = (1 - beta) * color2 + (beta) * color1;
+            glm::vec3 finalPoint = -(light.v0 - v2) * (ratio * j) + point1;
+
+            points.insert(points.begin(), PointLight(finalPoint, finalColor));
+        }
+    }
+
+    return points;
 }
 
 // samples a parallelogram light source
