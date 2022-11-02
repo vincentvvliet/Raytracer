@@ -16,8 +16,8 @@ int parallelogramLightPoints = 100;
 // you should fill in the vectors position and color with the sampled position and color
 std::list<PointLight> interpolateLine(const SegmentLight& light, std::list<PointLight> points, int segmentLightPoints) {
 
-    float scale = 1 / (100 * ((glm::dot(light.endpoint0, light.endpoint1) + 1) / 2));
-    for (int i = 0; i < 100*((glm::dot(light.endpoint0,light.endpoint1)+1)/2); i++) {
+    float scale = 1 / sqrt(segmentLightPoints);
+    for (int i = 0; i < sqrt(segmentLightPoints); i++) {
         glm::vec3 position = (light.endpoint0 - light.endpoint1) * (scale * i) + light.endpoint1;
         float alpha = (float)glm::distance(light.endpoint0, position) / glm::distance(light.endpoint0,light.endpoint1);
         glm::vec3 color = (1 - alpha) * light.color0 + alpha * light.color1;
@@ -91,8 +91,11 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
             shadowRay = { shadowRay.origin + shadowRay.t * shadowRay.direction,
                 glm::normalize(ray.origin + ray.t * ray.direction - samplePos),
                 glm::length((shadowRay.origin + shadowRay.t * shadowRay.direction - (ray.origin + ray.t * ray.direction))) - 0.00001f };
+            
         }else return { 0, 0, 0 };
+        
     }
+    
     return colour;
 }
    
@@ -165,11 +168,11 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     PointLight light = *it;
                     glm::vec3 lightColour = light.color;
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
-                   
+           
                    
                 }
 
-                total += color / glm::vec3 { linepoints.size(), linepoints.size(), linepoints.size() };
+                total += color / glm::vec3 { sqrt(50), sqrt(50), sqrt(50) };
             } else if (std::holds_alternative<ParallelogramLight>(light)) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
