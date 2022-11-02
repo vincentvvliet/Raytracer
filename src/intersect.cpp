@@ -96,8 +96,7 @@ bool intersectRayWithShape(const Sphere& sphere, Ray& ray, HitInfo& hitInfo)
 /// Input: an axis-aligned bounding box with the following parameters: minimum coordinates box.lower and maximum coordinates box.upper
 /// Output: if intersects then modify the hit parameter ray.t and return true, otherwise return false
 bool intersectRayWithShape(const AxisAlignedBox& box, Ray& ray)
-{
-    //TODO: Implement function
+{   
     glm::vec3 bmin = box.lower;
     glm::vec3 bmax = box.upper;
 
@@ -109,6 +108,4 @@ bool intersectRayWithShape(const AxisAlignedBox& box, Ray& ray)
     tmin = fmax(tmin, fmin(tz1, tz2)), tmax = fmin(tmax, fmax(tz1, tz2));
 
     return tmax >= tmin && tmin < ray.t && tmax > 0;
-
-    
 }
