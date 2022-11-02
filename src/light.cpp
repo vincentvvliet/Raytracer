@@ -86,6 +86,9 @@ float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 debu
         if (bvh.intersect(shadowRay, shadowInfo, features) && shadowRay.t < distance) {
             // Shadow ray intersect, therefore show no colour (return 0.0)
             drawRay(shadowRay, debugColor);
+            if (features.extra.enableTransparency) {
+                return hitInfo.material.transparency;
+            }
             return 0.0f;
         } else {
             // No shadow ray intersect, therefore show colour as per usual (return 1.0)
@@ -142,12 +145,14 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
             if (std::holds_alternative<PointLight>(light)) {
                 const PointLight pointLight = std::get<PointLight>(light);
                 // Perform your calculations for a point light.
-                float transparency = 1.0f;
+             
+                float shadowFactor = 1.0f;
                
                 if (features.enableHardShadow) {
                     shadowFactor = testVisibilityLightSample(pointLight.position, glm::vec3 { 1.0f, 0.0f, 0.0f }, bvh, features, ray, hitInfo);
                 }
-                total = total +  transparency * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);              
+               
+                total +=   shadowFactor * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);              
            
             } else if (std::holds_alternative<SegmentLight>(light) && features.enableSoftShadow) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
@@ -164,9 +169,10 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     if (shadowFactor == 1.0f) {
                         color += shadowFactor * computeShading(light.position, light.color, features, ray, hitInfo);
                     }
+                   
                 }
 
-                total += color / glm::vec3 { sqrt(50), sqrt(50) , sqrt(50) }
+                total += color / glm::vec3 { sqrt(50), sqrt(50), sqrt(50) };
             } else if (std::holds_alternative<ParallelogramLight>(light) && features.enableSoftShadow) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
