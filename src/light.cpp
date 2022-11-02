@@ -178,9 +178,8 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                         color += shadowFactor * computeShading(light.position, light.color, features, ray, hitInfo);
                     }
                 }
-
-                float denom = (sqrtSampleCount + 1) * (sqrtSampleCount + 1);
-                total += color / glm::vec3 { sqrtSampleCount * sqrtSampleCount, sqrtSampleCount * sqrtSampleCount, sqrtSampleCount * sqrtSampleCount };
+                
+                total += color / glm::vec3 { parallelogramLightPoints, parallelogramLightPoints, parallelogramLightPoints };
             }
         }
 
