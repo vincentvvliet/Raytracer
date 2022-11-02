@@ -9,23 +9,27 @@ DISABLE_WARNINGS_POP()
 #include <iostream>
 #include <tuple>
 
-int segmentLightPoints = 10;
+int segmentLightPoints = 50;
 int parallelogramLightPoints = 100;
 
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
 std::list<PointLight> interpolateLine(const SegmentLight& light, std::list<PointLight> points, int segmentLightPoints) {
-    for (int i = 0; i < segmentLightPoints; i++) {
-        
-        float random = rand() / RAND_MAX;
-        glm::vec3 point = light.endpoint0 + ((light.endpoint1 - light.endpoint0) * random);
-        glm::vec3 colour = light.color0 + ((light.color1 - light.color0) * random);
-        points.insert(points.begin(), PointLight(point, colour));
-        
+
+    float scale = 1 / sqrt(segmentLightPoints);
+    for (int i = 0; i < sqrt(segmentLightPoints); i++) {
+        glm::vec3 position = (light.endpoint0 - light.endpoint1) * (scale * i) + light.endpoint1;
+        float alpha = (float)glm::distance(light.endpoint0, position) / glm::distance(light.endpoint0,light.endpoint1);
+        glm::vec3 color = (1 - alpha) * light.color0 + alpha * light.color1;
+        points.insert(points.begin(),PointLight(position,color));
     }
+
+
     return points;
+
 }
-    std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight, std::list<PointLight> points,glm::vec3& position, glm::vec3& color)
+  
+std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight, std::list<PointLight> points,glm::vec3& position, glm::vec3& color)
 {
     
    
@@ -182,7 +186,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 }
 
                 
-                total += color / glm::vec3 { segmentLightPoints, segmentLightPoints , segmentLightPoints  };
+                total += color / glm::vec3 { sqrt(50), sqrt(50) , sqrt(50) };
                 
 
             } else if (std::holds_alternative<ParallelogramLight>(light) && features.enableSoftShadow) {
