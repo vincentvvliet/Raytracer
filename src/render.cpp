@@ -23,6 +23,11 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
             const glm::vec3 reflColor = getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
             finalColor += reflColor * hitInfo.material.ks;
         }
+
+        if (features.extra.enableTransparency && hitInfo.material.transparency < 1.0f) {
+            Ray transparencyRay {ray.origin + ray.direction * ray.t, ray.direction};
+            finalColor = finalColor * hitInfo.material.transparency + (1 - hitInfo.material.transparency) * getFinalColor(scene, bvh, transparencyRay, features, rayDepth + 1);
+        }
         // Draw a white debug ray if the ray hits.
         drawRay(ray, glm::vec3(1.0f));
 
