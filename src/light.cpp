@@ -26,29 +26,30 @@ void sampleSegmentLight(const SegmentLight& segmentLight, glm::vec3& position, g
 }
 
 
-std::list<PointLight> interpolate(const ParallelogramLight& light, std::list<PointLight> points, int sqrtSampleCount, glm::vec3 v1, glm::vec3 v2, float ratio_x, float ratio_y, float dist_x, float dist_y)
+std::list<PointLight> interpolate(const ParallelogramLight& light, std::list<PointLight> points, int sqrtSampleCount, glm::vec3 v1, glm::vec3 v2, float ratio, float dist_x, float dist_y)
 {
     // Uses bilinear interpolation for samples
     for (int i = 0; i <= sqrtSampleCount; i++) {
-        float x1 = (light.v0.x - v1.x) * (ratio_x * i) + v1.x;
-        float y1 = (light.v0.y - v1.y) * (ratio_x * i) + v1.y;
-        float z1 = (light.v0.z - v1.z) * (ratio_x * i) + v1.z;
-        glm::vec3 point1 = glm::vec3 { x1, y1, z1 };
+        /*float x1 = (light.v0.x - v1.x) * (ratio * i) + v1.x;
+        float y1 = (light.v0.y - v1.y) * (ratio * i) + v1.y;
+        float z1 = (light.v0.z - v1.z) * (ratio * i) + v1.z;*/
+        glm::vec3 point1 = (light.v0 - v1) * (ratio * i) + v1;
         float alpha = (float)glm::distance(light.v0, point1) / dist_x;
         for (int j = 0; j <= sqrtSampleCount; j++) {
             glm::vec3 color1 = (1 - alpha) * light.color0 + (alpha)*light.color1;
             glm::vec3 color2 = (1 - alpha) * light.color2 + (alpha)*light.color3;
-            float x2 = (light.v0.x - v2.x) * (ratio_y * j) + v2.x;
-            float y2 = (light.v0.y - v2.y) * (ratio_y * j) + v2.y;
-            float z2 = (light.v0.z - v2.z) * (ratio_y * j) + v2.z;
-            glm::vec3 point2 = glm::vec3 { x2, y2, z2 };
+            /*float x2 = (light.v0.x - v2.x) * (ratio * j) + v2.x;
+            float y2 = (light.v0.y - v2.y) * (ratio * j) + v2.y;
+            float z2 = (light.v0.z - v2.z) * (ratio * j) + v2.z;*/
+            glm::vec3 point2 = (light.v0 - v2) * (ratio * j) + v2;
             float beta = (float)glm::distance(light.v0, point2) / dist_y;
             glm::vec3 finalColor = (1 - beta) * color2 + (beta) * color1;
-            float final_x = -(light.v0.x - v2.x) * (ratio_y * j) + point1.x;
-            float final_y = -(light.v0.y - v2.y) * (ratio_y * j) + point1.y;
-            float final_z = -(light.v0.z - v2.z) * (ratio_y * j) + point1.z;
+            glm::vec3 finalPoint = -(light.v0 - v2) * (ratio * j) + point1;
+            /*float final_x = -(light.v0.x - v2.x) * (ratio * j) + point1.x;
+            float final_y = -(light.v0.y - v2.y) * (ratio * j) + point1.y;
+            float final_z = -(light.v0.z - v2.z) * (ratio * j) + point1.z;*/
 
-            points.insert(points.begin(), PointLight(glm::vec3(final_x, final_y, final_z), finalColor));
+            points.insert(points.begin(), PointLight(finalPoint, finalColor));
         }
     }
 
@@ -66,20 +67,15 @@ std::list<PointLight> sampleParallelogramLight(const ParallelogramLight& paralle
 
     float dist_x = glm::distance(parallelogramLight.v0, v1);
     float dist_y = glm::distance(parallelogramLight.v0, v2);
-    float normalizedDist_x = dist_x / sqrtSampleCount;
-    float normalizedDist_y = dist_y / sqrtSampleCount;
+    float ratio = 1.0f / sqrtSampleCount;
 
-    // Percentage in x and y directions
-    float ratio_x = normalizedDist_x / dist_x;
-    float ratio_y = normalizedDist_y / dist_y;
-
-    return interpolate(parallelogramLight, parallelogramPoints, sqrtSampleCount, v1, v2, ratio_x, ratio_y, dist_x, dist_y);
+    return interpolate(parallelogramLight, parallelogramPoints, sqrtSampleCount, v1, v2, ratio, dist_x, dist_y);
 
 }
 
 // test the visibility at a given light sample
 // returns 1.0 if sample is visible, 0.0 otherwise
-float testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
+float testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 debugColor, const BvhInterface& bvh, const Features& features, Ray ray, HitInfo hitInfo)
 {
     glm::vec3 intersection = ray.origin + ray.t * ray.direction;
     glm::vec3 lightVector = glm::normalize(samplePos - intersection);
@@ -91,7 +87,7 @@ float testVisibilityLightSample(const glm::vec3& samplePos, const BvhInterface& 
     if (glm::dot(-lightVector, hitInfo.normal) * glm::dot(camVector, hitInfo.normal) >= 0.0f) {
         if (bvh.intersect(shadowRay, shadowInfo, features) && shadowRay.t < distance) {
             // Shadow ray intersect, therefore show no colour (return 0.0)
-            drawRay(shadowRay, glm::vec3 { 0.0f, 0.0f, 1.0f });
+            drawRay(shadowRay, debugColor);
             return 0.0f;
         } else {
             // No shadow ray intersect, therefore show colour as per usual (return 1.0)
@@ -149,7 +145,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 // Perform your calculations for a point light.
                 float shadowFactor = 1.0f;
                 if (features.enableHardShadow) {
-                    shadowFactor = testVisibilityLightSample(pointLight.position, bvh, features, ray, hitInfo);
+                    shadowFactor = testVisibilityLightSample(pointLight.position, glm::vec3 { 1.0f, 0.0f, 0.0f }, bvh, features, ray, hitInfo);
                 }
 
                 total += shadowFactor * computeShading(pointLight.position, pointLight.color, features, ray, hitInfo);
@@ -173,7 +169,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 for (std::list<PointLight>::iterator it = points.begin(); it != points.end(); it++) {
                     // If in shadow, apply shadowFactor
                     PointLight light = *it;
-                    float shadowFactor = testVisibilityLightSample(light.position, bvh, features, ray, hitInfo);
+                    float shadowFactor = testVisibilityLightSample(light.position, glm::vec3 { 1.0f, 0.0f, 0.0f }, bvh, features, ray, hitInfo);
                     if (shadowFactor == 1.0f) {
                         color += shadowFactor * computeShading(light.position, light.color, features, ray, hitInfo);
                     }
