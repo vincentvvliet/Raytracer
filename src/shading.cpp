@@ -25,10 +25,6 @@ const glm::vec3 computePhongDiffuse(const glm::vec3& lightPosition, const glm::v
     // Phong diffuse
     glm::vec3 lightDirection = glm::normalize(lightPosition - (ray.origin + ray.direction * ray.t));
 
-    /*if (hitInfo.material.kdTexture) {
-        hitInfo.material.kdTexture->getTexel(acquireTexel(hitInfo.material.kdTexture.get(), hitInfo.texCoord, features));
-    }*/
-
     return lightColor * hitInfo.material.kd * fmax(dot(hitInfo.normal, lightDirection), 0.0f);
 }
 
