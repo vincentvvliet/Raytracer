@@ -303,9 +303,22 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                 const auto v0 = mesh.vertices[tri[0]];
                 const auto v1 = mesh.vertices[tri[1]];
                 const auto v2 = mesh.vertices[tri[2]];
-                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
-                    hitInfo.material = mesh.material;
+                Plane plane = trianglePlane(v0.position, v1.position, v2.position);
+                if (intersectRayWithTriangle(v0, v1, v2, plane, ray, hitInfo, features)) {
+                    glm::vec3 normal = plane.normal;
+
+                    if (features.enableNormalInterp) {
+                        glm::vec3 p = ray.origin + ray.t * ray.direction;
+                        glm::vec3 bary = computeBarycentricCoord(v0.position, v1.position, v2.position, p);
+
+                        if (bary.x <= 1.0f && bary.x >= 0.0f && bary.y <= 1.0f && bary.y >= 0.0f && bary.z <= 1.0f && bary.z >= 0.0f) {
+                            normal = interpolateNormal(v0.normal, v1.normal, v2.normal, bary);
+                        }
+                    }
+
                     hit = true;
+                    hitInfo.normal = normal;
+                    hitInfo.material = mesh.material;
                 }
             }
         }
@@ -317,12 +330,12 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         // TODO: implement here the bounding volume hierarchy traversal.
         // Please note that you should use `features.enableNormalInterp` and `features.enableTextureMapping`
         // to isolate the code that is only needed for the normal interpolation and texture mapping features.
-        return intersectBVH(ray,hitInfo, 0);
+        return intersectBVH(ray,hitInfo, 0, features);
    
     }
 }
 
-bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const
+bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId, Features features) const
 {
     std::stack<BVHNode> stack;
     stack.push(nodes[NodeId]);
@@ -342,7 +355,8 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
                 const auto v0 = mesh.vertices[triangle.x];
                 const auto v1 = mesh.vertices[triangle.y];
                 const auto v2 = mesh.vertices[triangle.z];
-                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
+                Plane plane = trianglePlane(v0.position, v1.position, v2.position);
+                if (intersectRayWithTriangle(v0, v1, v2, plane, ray, hitInfo, features)) {
                     hitInfo.material = mesh.material;
                 }
             }

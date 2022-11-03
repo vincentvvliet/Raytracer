@@ -91,7 +91,7 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
             shadowRay = { shadowRay.origin + shadowRay.t * shadowRay.direction,
                 glm::normalize(ray.origin + ray.t * ray.direction - samplePos),
                 glm::length((shadowRay.origin + shadowRay.t * shadowRay.direction - (ray.origin + ray.t * ray.direction))) - 0.00001f };
-        }else return { 0, 0, 0 };
+        } else return { 0, 0, 0 };
     }
     return colour;
 }
@@ -146,11 +146,10 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                       
                 glm::vec3 lightColour = pointLight.color;
                 if (features.enableHardShadow) {
-                   
                     lightColour = testVisibilityLightSample(pointLight.position, lightColour, bvh, features, ray, hitInfo);
                 }
                
-                total +=  computeShading(pointLight.position, lightColour, features, ray, hitInfo);              
+                total += computeShading(pointLight.position, lightColour, features, ray, hitInfo);              
            
             } else if (std::holds_alternative<SegmentLight>(light) && features.enableSoftShadow) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
@@ -165,12 +164,10 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     PointLight light = *it;
                     glm::vec3 lightColour = light.color;
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
-                   
-                   
                 }
 
                 total += color / glm::vec3 { sqrt(50), sqrt(50), sqrt(50) };
-            } else if (std::holds_alternative<ParallelogramLight>(light)) {
+            } else if (std::holds_alternative<ParallelogramLight>(light) && features.enableSoftShadow) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
                 std::list<PointLight> points;
@@ -188,13 +185,14 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     if (features.enableSoftShadow) {
                         lightColour = testVisibilityLightSample(light.position, lightColour, bvh, features, ray, hitInfo);
                     }
-
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
                 }
                 
-                total += color / (1.0f * parallelogramLightPoints);
+                total += color / (float) parallelogramLightPoints;
             }
         }
+
+        
 
         drawRay(ray, total);
         return total;
