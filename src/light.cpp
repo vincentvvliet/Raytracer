@@ -35,21 +35,6 @@ std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight, std::
 
 std::list<PointLight> interpolate(const ParallelogramLight& light, std::list<PointLight> points, int sqrtSampleCount, glm::vec3 v1, glm::vec3 v2, float ratio, float dist_x, float dist_y)
 {
-<<<<<<< HEAD
-    position = glm::vec3(0.0);
-    color = glm::vec3(0.0);
-    // TODO: implement this function.
-    float random = rand() / RAND_MAX;
-  
-    position = segmentLight.endpoint0 + ((segmentLight.endpoint1 - segmentLight.endpoint0) * random);
-    color = segmentLight.color0 + ((segmentLight.color1 - segmentLight.color0) * random);
-}
-
-
-std::list<PointLight> interpolate(const ParallelogramLight& light, std::list<PointLight> points, int sqrtSampleCount, glm::vec3 v1, glm::vec3 v2, float ratio, float dist_x, float dist_y)
-{
-=======
->>>>>>> master
     // Uses bilinear interpolation for samples
     for (int i = 0; i <= sqrtSampleCount; i++) {
         glm::vec3 point1 = (light.v0 - v1) * (ratio * i) + v1;
