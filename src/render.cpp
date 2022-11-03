@@ -12,7 +12,6 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 {
     HitInfo hitInfo;
  
-    
     if (bvh.intersect(ray, hitInfo, features)) {
         glm::vec3 finalColor = computeLightContribution(scene, bvh, features, ray, hitInfo);
         
@@ -56,6 +55,16 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
+            if (features.extra.enableDepthOfField) {
+                glm::vec3 newColor = glm::vec3 { 0.0f, 0.0f, 0.0f };
+                for (int i = 0; i < 10; i++) {
+                    Ray newRay = depthOfField(cameraRay, i, 10);
+                    glm::vec3 tempColor = getFinalColor(scene, bvh, newRay, features);
+                    newColor += tempColor;
+                }
+                glm::vec3 finalColor = newColor / (float)10;
+                screen.setPixel(x, y, finalColor);
+            }
             screen.setPixel(x, y, getFinalColor(scene, bvh, cameraRay, features));
         }
     }

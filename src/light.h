@@ -8,7 +8,9 @@
 
 
 
- std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight,std::list<PointLight> points, glm::vec3& position, glm::vec3& color);
+Ray depthOfField(const Ray ray, const int i, const int points);
+
+std::list<PointLight> sampleSegmentLight(const SegmentLight& segmentLight,std::list<PointLight> points, glm::vec3& position, glm::vec3& color);
 
 std::list<PointLight> sampleParallelogramLight(const ParallelogramLight& parallelogramLight, std::list<PointLight> parallelogramPoints, glm::vec3& position, glm::vec3& color);
 
