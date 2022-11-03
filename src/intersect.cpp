@@ -13,13 +13,12 @@ DISABLE_WARNINGS_POP()
 
 bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p)
 {
-    // Point in triangle test using barycentric coordinates.
-    glm::vec3 bary = computeBarycentricCoord(v0, v1, v2, p);    
-
-    if (bary[0] >= 0 && bary[1] >= 0 && bary[2] >= 0) {
+    float dot0 = glm::dot(n, glm::cross(v1 - v0, p - v0));
+    float dot1 = glm::dot(n, glm::cross(v2 - v1, p - v1));
+    float dot2 = glm::dot(n, glm::cross(v0 - v2, p - v2));
+    if (dot0 >= 0 && dot1 >= 0 && dot2 >= 0) {
         return true;
-    }
-
+    } 
     return false;
 }
 
@@ -47,25 +46,14 @@ Plane trianglePlane(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v
 
 /// Input: the three vertices of the triangle
 /// Output: if intersects then modify the hit parameter ray.t and return true, otherwise return false
-bool intersectRayWithTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, Ray& ray, HitInfo& hitInfo, Features features)
-{    
-    Plane plane = trianglePlane(v0.position, v1.position, v2.position);
+bool intersectRayWithTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Plane plane, Ray& ray, HitInfo& hitInfo, Features features)
+{
     float t = ray.t;
     if (intersectRayWithPlane(plane, ray)) {
         glm::vec3 p = ray.origin + ray.t * ray.direction;
 
-        glm::vec3 normal = plane.normal;
-        if (features.enableNormalInterp) {
-            /*glm::vec3 n0 = v0 + plane.normal;
-            glm::vec3 n1 = v1 + plane.normal;
-            glm::vec3 n2 = v2 + plane.normal;*/
-            std::cout << v0.normal.x;
-            normal = interpolateNormal(v0.normal, v1.normal, v2.normal, computeBarycentricCoord(v0.normal, v1.normal, v2.normal, p));
-        }
-
         if (pointInTriangle(v0.position, v1.position, v2.position, plane.normal, p)) {
             // Point must be in triangle, therefore hit
-            hitInfo.normal = normal;
             return true;
         } else {
             ray.t = t;
