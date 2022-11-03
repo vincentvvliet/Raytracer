@@ -182,7 +182,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     }
                 }
 
-                total += color / glm::vec3 { sqrt(50), sqrt(50) , sqrt(50) }
+                total += color / glm::vec3 { sqrt(50), sqrt(50), sqrt(50) };
             } else if (std::holds_alternative<ParallelogramLight>(light) && features.enableSoftShadow) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
@@ -206,6 +206,8 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 total += color / glm::vec3 { parallelogramLightPoints, parallelogramLightPoints, parallelogramLightPoints };
             }
         }
+
+        
 
         drawRay(ray, total);
         return total;
