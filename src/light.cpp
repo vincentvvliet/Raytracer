@@ -93,12 +93,14 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
                 glm::length((shadowRay.origin + shadowRay.t * shadowRay.direction - (ray.origin + ray.t * ray.direction))) - 0.00001f };
             drawRay(ray, colour);
             drawRay(shadowRay, colour);
-        }else return { 0, 0, 0 };
-        
+        } else {
+            drawRay(shadowRay, { 0, 0, 0 });
+            return { 0, 0, 0 };
+        }
     }
 
-    drawRay(shadowRay, colour);
-    drawRay(ray, colour);
+    drawRay(shadowRay, {1,1,1});
+   
     return colour;
 }
    
