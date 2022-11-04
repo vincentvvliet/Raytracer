@@ -13,12 +13,20 @@ DISABLE_WARNINGS_POP()
 
 bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p)
 {
-    float dot0 = glm::dot(n, glm::cross(v1 - v0, p - v0));
-    float dot1 = glm::dot(n, glm::cross(v2 - v1, p - v1));
-    float dot2 = glm::dot(n, glm::cross(v0 - v2, p - v2));
-    if (dot0 >= 0 && dot1 >= 0 && dot2 >= 0) {
+    glm::vec3 side_0 = v1 - v0;
+    glm::vec3 side_1 = v2 - v1;
+    glm::vec3 side_2 = v0 - v2;
+    glm::vec3 point_vec_0 = p - v0;
+    glm::vec3 point_vec_1 = p - v1;
+    glm::vec3 point_vec_2 = p - v2;
+
+    float alpha = glm::dot(n, glm::cross(side_0, point_vec_0));
+    float beta = glm::dot(n, glm::cross(side_1, point_vec_1));
+    float gamma = glm::dot(n, glm::cross(side_2, point_vec_2));
+    if (alpha >= 0 && beta >= 0 && gamma >= 0) {
         return true;
-    } 
+    }
+
     return false;
 }
 
