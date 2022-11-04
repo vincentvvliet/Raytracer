@@ -9,8 +9,26 @@ DISABLE_WARNINGS_POP()
 #include <iostream>
 #include <tuple>
 
+// Global variables
 int segmentLightPoints = 50;
 int parallelogramLightPoints = 100;
+float focalLength = 2.5f;
+int depthOfFieldPoints = 50;
+float aperture = 0.15f;
+
+Ray depthOfField(Ray ray, int i, int points)
+{
+    glm::vec3 focalPoint = ray.origin + (float)focalLength * ray.direction;
+    double pi = 2 * acos(0.0);
+    float rho = sqrt((i + 0.001f) / (points));
+    float theta = pi * (3.0f - sqrt(5.0f)) * (i - 1.0f);
+
+    glm::vec3 secondaryPosition = ray.origin + ((float)aperture) * glm::vec3 { cos(theta) * rho, sin(theta) * rho, 0.0f };
+
+    Ray secondaryRay { secondaryPosition, (focalPoint - secondaryPosition) };
+    drawRay(secondaryRay, glm::vec3(0.0f, 1.0f, 0.0f));
+    return secondaryRay;
+}
 
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
@@ -81,7 +99,7 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
     float distance = glm::length(camVector) - 0.00001f;
 
     Ray shadowRay = Ray { samplePos, lightVector, distance };
-    HitInfo shadowRayInfo;
+    HitInfo shadowRayInfo;  
 
     glm::vec3 colour = debugColor;
     float t = shadowRay.t;
@@ -91,7 +109,9 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
             shadowRay = { shadowRay.origin + shadowRay.t * shadowRay.direction,
                 glm::normalize(ray.origin + ray.t * ray.direction - samplePos),
                 glm::length((shadowRay.origin + shadowRay.t * shadowRay.direction - (ray.origin + ray.t * ray.direction))) - 0.00001f };
-        } else return { 0, 0, 0 };
+            drawRay(shadowRay, colour);
+            drawRay(ray, colour);
+        }else return { 0, 0, 0 };
     }
     return colour;
 }
@@ -151,7 +171,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                
                 total += computeShading(pointLight.position, lightColour, features, ray, hitInfo);              
            
-            } else if (std::holds_alternative<SegmentLight>(light) && features.enableSoftShadow) {
+            } else if (std::holds_alternative<SegmentLight>(light) ) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
                 std::list<PointLight> linepoints;
                 
@@ -163,11 +183,19 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     // If in shadow, apply shadowFactor
                     PointLight light = *it;
                     glm::vec3 lightColour = light.color;
+                    if (features.enableSoftShadow) {
+                        lightColour = testVisibilityLightSample(light.position, lightColour, bvh, features, ray, hitInfo);
+                        drawRay(ray, lightColour);
+                    }
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
+                    drawRay(ray, lightColour);
+                   
                 }
 
+                
                 total += color / glm::vec3 { sqrt(50), sqrt(50), sqrt(50) };
-            } else if (std::holds_alternative<ParallelogramLight>(light) && features.enableSoftShadow) {
+                drawRay(ray, total);
+            } else if (std::holds_alternative<ParallelogramLight>(light)) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
                 std::list<PointLight> points;
@@ -184,15 +212,23 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     glm::vec3 lightColour = light.color;
                     if (features.enableSoftShadow) {
                         lightColour = testVisibilityLightSample(light.position, lightColour, bvh, features, ray, hitInfo);
+                        drawRay(ray, lightColour);
                     }
+                    
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
+                    drawRay(ray, color);
                 }
                 
-                total += color / (float) parallelogramLightPoints;
+                total += color / (1.0f * parallelogramLightPoints);
+                drawRay(ray, total);
             }
         }
 
-        
+        if (features.extra.enableDepthOfField) {
+            for (int i = 0; i < depthOfFieldPoints; i++) {
+                depthOfField(ray, i, depthOfFieldPoints);
+            }
+        }
 
         drawRay(ray, total);
         return total;
