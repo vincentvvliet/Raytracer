@@ -9,8 +9,26 @@ DISABLE_WARNINGS_POP()
 #include <iostream>
 #include <tuple>
 
+// Global variables
 int segmentLightPoints = 50;
 int parallelogramLightPoints = 100;
+float focalLength = 2.5f;
+int depthOfFieldPoints = 50;
+float aperture = 0.15f;
+
+Ray depthOfField(Ray ray, int i, int points)
+{
+    glm::vec3 focalPoint = ray.origin + (float)focalLength * ray.direction;
+    double pi = 2 * acos(0.0);
+    float rho = sqrt((i + 0.001f) / (points));
+    float theta = pi * (3.0f - sqrt(5.0f)) * (i - 1.0f);
+
+    glm::vec3 secondaryPosition = ray.origin + ((float)aperture) * glm::vec3 { cos(theta) * rho, sin(theta) * rho, 0.0f };
+
+    Ray secondaryRay { secondaryPosition, (focalPoint - secondaryPosition) };
+    drawRay(secondaryRay, glm::vec3(0.0f, 1.0f, 0.0f));
+    return secondaryRay;
+}
 
 // samples a segment light source
 // you should fill in the vectors position and color with the sampled position and color
@@ -206,7 +224,11 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
             }
         }
 
-        
+        if (features.extra.enableDepthOfField) {
+            for (int i = 0; i < depthOfFieldPoints; i++) {
+                depthOfField(ray, i, depthOfFieldPoints);
+            }
+        }
 
         drawRay(ray, total);
         return total;

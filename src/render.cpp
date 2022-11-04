@@ -12,14 +12,12 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
 {
     HitInfo hitInfo;
  
-    
     if (bvh.intersect(ray, hitInfo, features)) {
         glm::vec3 finalColor = computeLightContribution(scene, bvh, features, ray, hitInfo);
         
         if (features.enableRecursive && rayDepth < 3 && glm::length(hitInfo.material.ks) > 0) {
             Ray reflection = computeReflectionRay(ray, hitInfo);
             
-            // TODO: put your own implementation of recursive ray tracing here.
             const glm::vec3 reflColor = getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
             finalColor += reflColor * hitInfo.material.ks;
             drawRay(reflection, finalColor);
@@ -60,7 +58,16 @@ void renderRayTracing(const Scene& scene, const Trackball& camera, const BvhInte
                 float(y) / float(windowResolution.y) * 2.0f - 1.0f
             };
             const Ray cameraRay = camera.generateRay(normalizedPixelPos);
-            screen.setPixel(x, y, getFinalColor(scene, bvh, cameraRay, features));
+            if (features.extra.enableDepthOfField) {
+                glm::vec3 finalColor = glm::vec3 { 0.0f, 0.0f, 0.0f };
+                for (int i = 0; i < depthOfFieldPoints; i++) {
+                    Ray secondaryRay = depthOfField(cameraRay, i, depthOfFieldPoints);
+                    finalColor += getFinalColor(scene, bvh, secondaryRay, features);
+                }
+                screen.setPixel(x, y, finalColor / (float)depthOfFieldPoints);
+            } else {
+                screen.setPixel(x, y, getFinalColor(scene, bvh, cameraRay, features));
+            }
         }
     }
 }
