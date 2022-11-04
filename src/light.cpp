@@ -91,6 +91,8 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
             shadowRay = { shadowRay.origin + shadowRay.t * shadowRay.direction,
                 glm::normalize(ray.origin + ray.t * ray.direction - samplePos),
                 glm::length((shadowRay.origin + shadowRay.t * shadowRay.direction - (ray.origin + ray.t * ray.direction))) - 0.00001f };
+            drawRay(shadowRay, colour);
+            drawRay(ray, colour);
         }else return { 0, 0, 0 };
     }
     return colour;
@@ -164,6 +166,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     // If in shadow, apply shadowFactor
                     PointLight light = *it;
                     glm::vec3 lightColour = light.color;
+
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
                    
                    
