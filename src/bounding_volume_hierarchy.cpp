@@ -8,30 +8,14 @@
 #include <iostream>
 #include <stack>
 
-#include <fmt/chrono.h>
-#include <fmt/core.h>
-
-#include <chrono>
-
-BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene, const Features& features)
+BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     : m_pScene(pScene)
 {
-    using clock = std::chrono::high_resolution_clock;
-    const auto start = clock::now();
     Scene ourscene = pScene[0];
-
-    bool SAHbinning;
-
-    //Checks if we have SAHbinning enabled
-    if (features.extra.enableBvhSahBinning) {
-        SAHbinning = true;
-    } else {
-        SAHbinning = false;
-    }
-  
+   
+    //nodes.clear();
+    // nu alleen gedaan met triangels vgm moet het ook met spheres
     //  TODO: implement BVH construction
-    //Fill the vectors which are gonna be needed to 
-    // acces the triangles
     int meshid = 0;
     int tri = 0;
     for (Mesh m : ourscene.meshes) {
@@ -44,34 +28,23 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene, const Features& 
         allmeshes.push_back(m);
         meshid++;
     }
-    //total amount of trianhgles
     int N = tri;
     
-    //initialize the rootnode
     glm::vec3 aabbMin = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),std::numeric_limits<float>::max() };
     glm::vec3 aabbMax = { std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min() };
     BVHNode root = {aabbMin, aabbMax, 0, 0, N};
     
-    //put too node in out tree vector
     nodes.push_back(root);
-    //update the aabb bounds of the root node so it encompass the object
-    UpdateNodeAABBBounds(0);
-    //start dividing the scene
-    divide(0, 0, SAHbinning);
-    //calculate the height of the tree just created
-    level = tree_height(0);
+    UpdateNodeBounds(0);
+    subdivide(0, 0);
 
-    const auto end = clock::now();
-    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    fmt::print("Creating the BVH took {} ms\n", duration);
+    level = tree_height(0);
 }
 
-void BoundingVolumeHierarchy::UpdateNodeAABBBounds(int NodeId)
+void BoundingVolumeHierarchy::UpdateNodeBounds(int NodeId)
 {
-    
     BVHNode& node = nodes[NodeId];
-    //for every triangle in the node we update the corresponding aabb to encompass all triangles
-    //in the node
+
     for (int first = node.firsttri, i = 0; i < node.triCount; i++) {
         int triId = triIdx[first + i];
         glm::uvec3& triangle = alltriangles[triId];
@@ -92,6 +65,7 @@ void BoundingVolumeHierarchy::UpdateNodeAABBBounds(int NodeId)
         node.aabbMin[2] = fminf(node.aabbMin[2], mesh.vertices[triangle.z].position[2]);
 
         
+        
         node.aabbMax[0] = fmaxf(node.aabbMax[0], mesh.vertices[triangle.x].position[0]);
         node.aabbMax[1] = fmaxf(node.aabbMax[1], mesh.vertices[triangle.x].position[1]);
         node.aabbMax[2] = fmaxf(node.aabbMax[2], mesh.vertices[triangle.x].position[2]);
@@ -107,8 +81,7 @@ void BoundingVolumeHierarchy::UpdateNodeAABBBounds(int NodeId)
     }
 }
 
-
-void BoundingVolumeHierarchy::divide(int NodeId, int axis, bool SAHbinning)
+void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
 
 {
     BVHNode& node = nodes[NodeId];
@@ -118,40 +91,38 @@ void BoundingVolumeHierarchy::divide(int NodeId, int axis, bool SAHbinning)
     }
        
     glm::vec3 extent = node.aabbMax - node.aabbMin;
-    //stansard position where we are gonna split the scene
     float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
 
     //SAH
-    if (SAHbinning) {
-        //get the most coseffective way of splitting the scene on a certain axis
-        //where cost is defined by the area of the whole aabb's times the triangles in the aabb's
-        float bestCost = std::numeric_limits<float>::max();
-        for (int i = 0; i < node.triCount; i++) {
-            int triId = triIdx[node.firsttri + i];
-            glm::uvec3& triangle = alltriangles[triId];
-            int meshid = meshpointer[triId];
-            Mesh mesh = allmeshes[meshid];
+    //int bestAxis = -1;
+    //float bestPos = 0, bestCost = std::numeric_limits<float>::max();
+    //for (int axis1 = 0; axis1 < 3; axis1++) {
+    //    for (int i = 0; i < node.triCount; i++) {
+    //        int triId = triIdx[i];
+    //        glm::uvec3& triangle = alltriangles[triId];
+    //        int meshid = meshpointer[triId];
+    //        Mesh mesh = allmeshes[meshid];
 
-            glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
-                + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
+    //        glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
+    //            + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
 
-            //calculate the costo f having the split position at every triangle in the aabb
-            float candidatePos = centroid[axis];
-            float cost = costSAH(node, axis, candidatePos);
+    //        float candidatePos = centroid[axis1];
+    //        float cost = EvaluateSAH(node, axis1, candidatePos);
 
-            if (cost < bestCost) {
-                //get the split that optimizez this cost
-                splitPos = candidatePos;
-               bestCost = cost;
-            }
-        }
-    }
+    //        if (cost < bestCost) {
+    //            bestPos = candidatePos;
+    //            bestAxis = axis1;
+    //            bestCost = cost;
+    //        }
+    //    }
+    //}
+
+    //int axis1 = bestAxis;
+    //float splitPos = bestPos;
 
     int i = node.firsttri;
     int j = i + node.triCount - 1;
-   
-    //keep swapping the triangles indices in the tri errar such that they are dvidied
-    //between left of the split pos and right of the split positions
+    //--to be implemented--
     while (i <= j) {
         // calculate centroid triangle
         int triId = triIdx[i];
@@ -168,14 +139,10 @@ void BoundingVolumeHierarchy::divide(int NodeId, int axis, bool SAHbinning)
             std::swap(triIdx[i], triIdx[j--]);
         }
     }
-    //totoal amount of triangles on the left aabb
     int leftCount = i-node.firsttri;
     if (leftCount == 0 || leftCount == node.triCount)
         return;
 
-    //set the leftchild id to beign the nodesused+
-    //same for the rightid 
-    //this will be used when traversing the scene tree
     int leftChildid = nodesUsed++;
     int rightChildid = nodesUsed++;
 
@@ -190,40 +157,43 @@ void BoundingVolumeHierarchy::divide(int NodeId, int axis, bool SAHbinning)
     nodes.push_back(leftchild);
     nodes.push_back(rightchild);
 
-    //the node value suddenly changed so i did this
     BVHNode& node1 = nodes[NodeId];
+
     node1.triCount = 0;
 
-    //update the aabb bounds for the children just created
-    UpdateNodeAABBBounds(leftChildid);
-    UpdateNodeAABBBounds(rightChildid);
-
-    //we go trhough the axis's one by one
+    UpdateNodeBounds(leftChildid);
+    UpdateNodeBounds(rightChildid);
     if (axis == 0) {
-        divide(leftChildid, 1, SAHbinning);
-        divide(rightChildid, 1, SAHbinning);
+        subdivide(leftChildid, 1);
+        subdivide(rightChildid, 1);
     } else if (axis == 1) {
-        divide(leftChildid, 2, SAHbinning);
-        divide(rightChildid, 2, SAHbinning);
+        subdivide(leftChildid, 2);
+        subdivide(rightChildid, 2);
     } else if (axis == 2) {
-        divide(leftChildid, 0, SAHbinning);
-        divide(rightChildid, 0, SAHbinning);
+        subdivide(leftChildid, 0);
+        subdivide(rightChildid, 0);
     }
+        
 return;
 }
+
+
 
 // Return the depth of the tree that you constructed. This is used to tell the
 // slider in the UI how many steps it should display for Visual Debug 1.
 int BoundingVolumeHierarchy::numLevels() const
 {
     return level;
+   
+    
 }
+
+
 
 // Return the number of leaf nodes in the tree that you constructed. This is used to tell the
 // slider in the UI how many steps it should display for Visual Debug 2.
 int BoundingVolumeHierarchy::numLeaves() const
 {   
-    //basicly counts the number of leaves in a binary tree
     int count = 0;
     for (BVHNode node : nodes) {
         if (node.isLeaf())
@@ -244,16 +214,19 @@ void BoundingVolumeHierarchy::debugDrawLevel(int level)
     std::vector<BVHNode> nodesatlevel;
    
     LevelNodes(0, nodesatlevel, 0, level);
+    // Draw the AABB as a (white) wireframe box.
 
     for (BVHNode& node : nodesatlevel) {
         AxisAlignedBox aabb { node.aabbMin, node.aabbMax };
         drawAABB(aabb, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
     }
+    //AxisAlignedBox aabb { glm::vec3(0.0f), glm::vec3(0.0f, 1.05f, 1.05f) };
+    // drawAABB(aabb, DrawMode::Wireframe);
+    //drawAABB(aabb, DrawMode::Filled, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
 }
 
 void BoundingVolumeHierarchy::LevelNodes(int NodeId, std::vector<BVHNode>& resultarray, int currentlevel, int level)
-{   
-    //get the nodes corresponding to a certain level
+{
     if (nodes[NodeId].isLeaf()) {
         resultarray.push_back(nodes[NodeId]);
         return;
@@ -269,7 +242,6 @@ void BoundingVolumeHierarchy::LevelNodes(int NodeId, std::vector<BVHNode>& resul
 
 int BoundingVolumeHierarchy::tree_height(int NodeId) 
 {   
-    //calculated the height of the binary tree
     BVHNode& node = nodes[NodeId];
     if (node.isLeaf())
     {
@@ -296,6 +268,8 @@ int BoundingVolumeHierarchy::tree_height(int NodeId)
 void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
 {
     // Draw the AABB as a transparent green box.
+    // AxisAlignedBox aabb{ glm::vec3(-0.05f), glm::vec3(0.05f, 1.05f, 1.05f) };
+    // drawShape(aabb, DrawMode::Filled, glm::vec3(0.0f, 1.0f, 0.0f), 0.2f);
     int i =0;
     AxisAlignedBox aabb;
     for (BVHNode node : nodes) {
@@ -307,6 +281,11 @@ void BoundingVolumeHierarchy::debugDrawLeaf(int leafIdx)
             i++;
         }
     }
+    // Draw the AABB as a (white) wireframe box
+    // drawAABB(aabb, DrawMode::Wireframe);
+    
+
+    // once you find the leaf node, you can use the function drawTriangle (from draw.h) to draw the contained primitives
 }
 
 // Return true if something is hit, returns false otherwise. Only find hits if they are closer than t stored
@@ -324,27 +303,9 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                 const auto v0 = mesh.vertices[tri[0]];
                 const auto v1 = mesh.vertices[tri[1]];
                 const auto v2 = mesh.vertices[tri[2]];
-                Plane plane = trianglePlane(v0.position, v1.position, v2.position);
-                if (intersectRayWithTriangle(v0, v1, v2, plane, ray, hitInfo, features)) {
+                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
                     hitInfo.material = mesh.material;
-                    glm::vec3 normal = plane.normal;
-                    glm::vec3 p = ray.origin + ray.t * ray.direction;
-                    glm::vec3 bary = computeBarycentricCoord(v0.position, v1.position, v2.position, p);
-
-                    if (features.enableNormalInterp) {
-                        if (bary.x <= 1.0f && bary.x >= 0.0f && bary.y <= 1.0f && bary.y >= 0.0f && bary.z <= 1.0f && bary.z >= 0.0f) {
-                            normal = interpolateNormal(v0.normal, v1.normal, v2.normal, bary);
-                        }
-                    }
-
-                    if (features.enableTextureMapping) {
-                        if (hitInfo.material.kdTexture) {
-                            hitInfo.material.kd = acquireTexel(*hitInfo.material.kdTexture, interpolateTexCoord(v0.texCoord, v1.texCoord, v2.texCoord, bary));
-                        }
-                    }
-
                     hit = true;
-                    hitInfo.normal = normal;
                 }
             }
         }
@@ -356,14 +317,13 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         // TODO: implement here the bounding volume hierarchy traversal.
         // Please note that you should use `features.enableNormalInterp` and `features.enableTextureMapping`
         // to isolate the code that is only needed for the normal interpolation and texture mapping features.
-        return intersectBVH(ray,hitInfo, 0, features);
+        return intersectBVH(ray,hitInfo, 0);
    
     }
 }
 
-bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId, Features features) const
+bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const
 {
-    //BVH traversal code
     std::stack<BVHNode> stack;
     stack.push(nodes[NodeId]);
     float t = ray.t;
@@ -373,7 +333,6 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
         //AxisAlignedBox aabb { curnode.aabbMin, curnode.aabbMax };
         //drawAABB(aabb, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.1f);
         stack.pop();
-        //if current node is  a lead we try to intersect with all the triangles
         if (curnode.isLeaf()) {
             for (int i = 0; i < curnode.triCount; i++) {
                 int triId = triIdx[curnode.firsttri + i];
@@ -383,13 +342,11 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
                 const auto v0 = mesh.vertices[triangle.x];
                 const auto v1 = mesh.vertices[triangle.y];
                 const auto v2 = mesh.vertices[triangle.z];
-                Plane plane = trianglePlane(v0.position, v1.position, v2.position);
-                if (intersectRayWithTriangle(v0, v1, v2, plane, ray, hitInfo, features)) {
+                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
                     hitInfo.material = mesh.material;
                 }
             }
         } else {
-
             BVHNode leftnode = nodes[curnode.leftChild];
             BVHNode rightnode = nodes[curnode.leftChild + 1];
 
@@ -398,10 +355,7 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
 
             Ray leftray = ray;
             Ray rightray = ray;
-            //If we interesect with both the left child and aabb and the right child  aabb then we push both
             if (intersectRayWithShape(aabbleft, leftray) && intersectRayWithShape(aabbright, rightray)) {
-                //first push the one with the one with the heighest t 
-                //so that we end up rendering the one with the lowest t
                 if (leftray.t > rightray.t) {
                     stack.push(rightnode);
                     stack.push(leftnode);
@@ -409,9 +363,7 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
                     stack.push(leftnode);
                     stack.push(rightnode);
                 }
-            } 
-            //if we only intersect with one child push that one
-            else if (intersectRayWithShape(aabbleft, leftray) && !intersectRayWithShape(aabbright, rightray)) {
+            } else if (intersectRayWithShape(aabbleft, leftray) && !intersectRayWithShape(aabbright, rightray)) {
                 stack.push(leftnode);
             } else if (!intersectRayWithShape(aabbleft, leftray) && intersectRayWithShape(aabbright, rightray)) {
                 stack.push(rightnode);
@@ -419,71 +371,9 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
             continue;
         }
     }
-    //if we have found a smaller t we now we intersected if we did not we no we missed
     if (ray.t < t) {
         return true;
     } else {
         return false;
     }
-}
-
-
-//for the cost evaluation of the candidate position for splittin the node
-float BoundingVolumeHierarchy::costSAH(BVHNode& node, int axis, float pos) const {
-
-    glm::vec3 aabbMin = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
-    glm::vec3 aabbMax = { std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min() };
-    AxisAlignedBox aabbleft { aabbMin, aabbMax };
-    AxisAlignedBox aabbright { aabbMin, aabbMax };
-    int leftCount=0;
-    int rightCount=0;
-
-    //keep growing the left adn the right box untill all the corersponding triangle centroids
-    // are in there respective boxes
-    for (int i = 0; i < node.triCount; i++) {
-        int triId = triIdx[node.leftChild + i];
-        glm::uvec3 triangle = alltriangles[triId];
-        int meshid = meshpointer[triId];
-        Mesh mesh = allmeshes[meshid];
-
-        glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
-            + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
-        if (centroid[axis] < pos) {
-            leftCount++;
-            growAABB(aabbleft, mesh.vertices[triangle.x].position);
-            growAABB(aabbleft, mesh.vertices[triangle.y].position);
-            growAABB(aabbleft, mesh.vertices[triangle.z].position);
-        } else {
-            rightCount++;
-            growAABB(aabbright, mesh.vertices[triangle.x].position);
-            growAABB(aabbright, mesh.vertices[triangle.y].position);
-            growAABB(aabbright, mesh.vertices[triangle.z].position);
-        }
-
-    }
-    //calculate the cost of having the AABBS be this
-    float cost = leftCount * areaAABB(aabbleft) + rightCount * areaAABB(aabbright);
-    return cost > 0 ? cost : std::numeric_limits<float>::max();
-
-
-}
-
-void BoundingVolumeHierarchy::growAABB(AxisAlignedBox& aabb, glm::vec3 p) const
-{
-    //if the vertex is smaller thent he current lower
-    //replace the lower with this vertex
-    aabb.lower[0] = fminf(aabb.lower[0], p[0]);
-    aabb.lower[1] = fminf(aabb.lower[1], p[1]);
-    aabb.lower[2] = fminf(aabb.lower[2], p[2]);
-
-    //same idea for the upper of the current aabb
-    aabb.upper[0] = fmaxf(aabb.upper[0], p[0]);
-    aabb.upper[1] = fmaxf(aabb.upper[1], p[1]);
-    aabb.upper[2] = fmaxf(aabb.upper[2], p[2]);
-}
-
-float BoundingVolumeHierarchy::areaAABB(AxisAlignedBox& aabb) const
-{   
-    glm::vec3 extent = aabb.upper - aabb.lower;
-    return extent[0] * extent[1] + extent[1] * extent[2] + extent[2] * extent[0];
 }

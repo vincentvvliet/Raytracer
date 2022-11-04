@@ -22,7 +22,7 @@ glm::vec3 getFinalColor(const Scene& scene, const BvhInterface& bvh, Ray ray, co
             // TODO: put your own implementation of recursive ray tracing here.
             const glm::vec3 reflColor = getFinalColor(scene, bvh, reflection, features, rayDepth + 1);
             finalColor += reflColor * hitInfo.material.ks;
-            drawRay(reflection, reflColor);
+            drawRay(reflection, finalColor);
             
         }
 

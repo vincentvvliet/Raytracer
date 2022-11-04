@@ -9,16 +9,25 @@ DISABLE_WARNINGS_POP()
 #include <cmath>
 #include <limits>
 #include <iostream>
-#include <interpolate.cpp>
 
-bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p)
-{
-    float dot0 = glm::dot(n, glm::cross(v1 - v0, p - v0));
-    float dot1 = glm::dot(n, glm::cross(v2 - v1, p - v1));
-    float dot2 = glm::dot(n, glm::cross(v0 - v2, p - v2));
-    if (dot0 >= 0 && dot1 >= 0 && dot2 >= 0) {
+
+bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) {
+    // Point in triangle test using barycentric coordinates.
+
+    glm::vec3 side_0 = v1 - v0;
+    glm::vec3 side_1 = v2 - v1;
+    glm::vec3 side_2 = v0 - v2;
+    glm::vec3 point_vec_0 = p - v0;
+    glm::vec3 point_vec_1 = p - v1;
+    glm::vec3 point_vec_2 = p - v2;
+
+    float alpha = glm::dot(n, glm::cross(side_0, point_vec_0));
+    float beta = glm::dot(n, glm::cross(side_1, point_vec_1));
+    float gamma = glm::dot(n, glm::cross(side_2, point_vec_2));
+    if (alpha >= 0 && beta >= 0 && gamma >= 0) {
         return true;
-    } 
+    }
+    
     return false;
 }
 
@@ -46,14 +55,14 @@ Plane trianglePlane(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v
 
 /// Input: the three vertices of the triangle
 /// Output: if intersects then modify the hit parameter ray.t and return true, otherwise return false
-bool intersectRayWithTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Plane plane, Ray& ray, HitInfo& hitInfo, Features features)
-{
+bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, Ray& ray, HitInfo& hitInfo)
+{    
+    Plane plane = trianglePlane(v0, v1, v2);
     float t = ray.t;
     if (intersectRayWithPlane(plane, ray)) {
-        glm::vec3 p = ray.origin + ray.t * ray.direction;
-
-        if (pointInTriangle(v0.position, v1.position, v2.position, plane.normal, p)) {
+        if (pointInTriangle(v0, v1, v2, plane.normal, ray.origin + ray.t * ray.direction) && ray.t > 0.00001) {
             // Point must be in triangle, therefore hit
+            hitInfo.normal = plane.normal;
             return true;
         } else {
             ray.t = t;
