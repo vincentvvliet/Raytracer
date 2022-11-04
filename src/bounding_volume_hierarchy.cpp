@@ -318,8 +318,7 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
 
                     if (features.enableTextureMapping) {
                         if (hitInfo.material.kdTexture) {
-                            glm::vec2 texture = interpolateTexCoord(v0.texCoord, v1.texCoord, v2.texCoord, bary);
-                            hitInfo.material.kd = acquireTexel(*hitInfo.material.kdTexture, texture);
+                            hitInfo.material.kd = acquireTexel(*hitInfo.material.kdTexture, interpolateTexCoord(v0.texCoord, v1.texCoord, v2.texCoord, bary));
                         }
                     }
 
