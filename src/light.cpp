@@ -12,24 +12,22 @@ DISABLE_WARNINGS_POP()
 // Global variables
 int segmentLightPoints = 50;
 int parallelogramLightPoints = 100;
-int depthOfFieldPoints = 10;
-float focalLength = 4;
-float aperture = 0.2f;
+float focalLength = 3.0f;
+int depthOfFieldPoints = 100;
+float aperture = 0.5f;
 
 Ray depthOfField(Ray ray, int i, int points)
 {
-    glm::vec3 focalPoint = ray.origin + ray.direction * ((float)focalLength);
+    glm::vec3 focalPoint = ray.origin + (float)focalLength * ray.direction;
     double pi = 2 * acos(0.0);
-    float goldenAngle = pi * (3.0f - sqrt(5.0f));
     float rho = sqrt((i + 0.001f) / (points));
-    float theta = goldenAngle * (i - 1.0f);
+    float theta = pi * (3.0f - sqrt(5.0f)) * (i - 1.0f);
 
-    glm::vec3 beginPose = glm::vec3 { cos(theta) * rho, sin(theta) * rho, 0.0f };
-    glm::vec3 finalPosition = ((float)aperture) * beginPose + ray.origin;
+    glm::vec3 secondaryPosition = ray.origin + ((float)aperture) * glm::vec3 { cos(theta) * rho, sin(theta) * rho, 0.0f };
 
-    Ray finalRay { finalPosition, (focalPoint - finalPosition) };
-    drawRay(finalRay, glm::vec3(0.0f, 0.0f, 1.0f));
-    return finalRay;
+    Ray secondaryRay { secondaryPosition, (focalPoint - secondaryPosition) };
+    drawRay(secondaryRay, glm::vec3(0.0f, 1.0f, 0.0f));
+    return secondaryRay;
 }
 
 // samples a segment light source

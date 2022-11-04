@@ -6,7 +6,7 @@
 #include "scene.h"
 #include "shading.h"
 
-
+extern int depthOfFieldPoints;
 
 Ray depthOfField(const Ray ray, const int i, const int points);
 
