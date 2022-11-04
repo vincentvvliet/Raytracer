@@ -38,7 +38,7 @@ struct aabSAHHelper {
 class BoundingVolumeHierarchy {
 public:
     // Constructor. Receives the scene and builds the bounding volume hierarchy.
-    BoundingVolumeHierarchy(Scene* pScene);
+    BoundingVolumeHierarchy(Scene* pScene, const Features& features);
 
     
 
@@ -48,7 +48,7 @@ public:
     
 
     void UpdateNodeBounds(int NodeId);
-    void subdivide(int NodeId, int axis);
+    void subdivide(int NodeId, int axis, bool SAHBinning);
     float EvaluateSAH(BVHNode node, int axis1, float pos);
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;

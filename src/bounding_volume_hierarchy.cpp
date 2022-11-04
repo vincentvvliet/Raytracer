@@ -7,11 +7,23 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <stack>
+#include <fmt/chrono.h>
+#include <fmt/core.h>
 
-BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
+#include <chrono>
+
+BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene, const Features& features)
+
     : m_pScene(pScene)
 {
     Scene ourscene = pScene[0];
+
+    bool SAHBinning;
+    if (features.extra.enableBvhSahBinning) {
+        SAHBinning=true;
+    } else {
+        SAHBinning = false;
+    }
    
     //nodes.clear();
     // nu alleen gedaan met triangels vgm moet het ook met spheres
@@ -36,7 +48,7 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(Scene* pScene)
     
     nodes.push_back(root);
     UpdateNodeBounds(0);
-    subdivide(0, 0);
+    subdivide(0, 0, SAHBinning);
 
     level = tree_height(0);
 }
@@ -81,8 +93,7 @@ void BoundingVolumeHierarchy::UpdateNodeBounds(int NodeId)
     }
 }
 
-void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
-
+void BoundingVolumeHierarchy::subdivide(int NodeId, int axis, bool SAHBinning)
 {
     BVHNode& node = nodes[NodeId];
  
@@ -94,31 +105,29 @@ void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
     float splitPos = node.aabbMin[axis] + extent[axis] * 0.5f;
 
     //SAH
-    //int bestAxis = -1;
-    //float bestPos = 0, bestCost = std::numeric_limits<float>::max();
-    //for (int axis1 = 0; axis1 < 3; axis1++) {
-    //    for (int i = 0; i < node.triCount; i++) {
-    //        int triId = triIdx[i];
-    //        glm::uvec3& triangle = alltriangles[triId];
-    //        int meshid = meshpointer[triId];
-    //        Mesh mesh = allmeshes[meshid];
+    if (SAHBinning) {
 
-    //        glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
-    //            + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
+        float bestPos = 0, bestCost = std::numeric_limits<float>::max();
 
-    //        float candidatePos = centroid[axis1];
-    //        float cost = EvaluateSAH(node, axis1, candidatePos);
+        for (int i = 0; i < node.triCount; i++) {
+            int triId = triIdx[node.firsttri + i];
+            glm::uvec3& triangle = alltriangles[triId];
+            int meshid = meshpointer[triId];
+            Mesh mesh = allmeshes[meshid];
 
-    //        if (cost < bestCost) {
-    //            bestPos = candidatePos;
-    //            bestAxis = axis1;
-    //            bestCost = cost;
-    //        }
-    //    }
-    //}
+            glm::vec3 centroid = (1.0f / 3.0f) * mesh.vertices[triangle.x].position + (1.0f / 3.0f) * mesh.vertices[triangle.y].position
+                + (1.0f / 3.0f) * mesh.vertices[triangle.z].position;
 
-    //int axis1 = bestAxis;
-    //float splitPos = bestPos;
+            float candidatePos = centroid[axis];
+            float cost = EvaluateSAH(node, axis, candidatePos);
+
+            if (cost < bestCost) {
+                splitPos = candidatePos;
+                bestCost = cost;
+            }
+        }
+    }
+
 
     int i = node.firsttri;
     int j = i + node.triCount - 1;
@@ -164,14 +173,14 @@ void BoundingVolumeHierarchy::subdivide(int NodeId, int axis)
     UpdateNodeBounds(leftChildid);
     UpdateNodeBounds(rightChildid);
     if (axis == 0) {
-        subdivide(leftChildid, 1);
-        subdivide(rightChildid, 1);
+        subdivide(leftChildid, 1, SAHBinning);
+        subdivide(rightChildid, 1, SAHBinning);
     } else if (axis == 1) {
-        subdivide(leftChildid, 2);
-        subdivide(rightChildid, 2);
+        subdivide(leftChildid, 2, SAHBinning);
+        subdivide(rightChildid, 2, SAHBinning);
     } else if (axis == 2) {
-        subdivide(leftChildid, 0);
-        subdivide(rightChildid, 0);
+        subdivide(leftChildid, 0, SAHBinning);
+        subdivide(rightChildid, 0, SAHBinning);
     }
         
 return;
