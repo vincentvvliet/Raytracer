@@ -81,7 +81,7 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
     float distance = glm::length(camVector) - 0.00001f;
 
     Ray shadowRay = Ray { samplePos, lightVector, distance };
-    HitInfo shadowRayInfo;
+    HitInfo shadowRayInfo;  
 
     glm::vec3 colour = debugColor;
     float t = shadowRay.t;
@@ -91,11 +91,14 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
             shadowRay = { shadowRay.origin + shadowRay.t * shadowRay.direction,
                 glm::normalize(ray.origin + ray.t * ray.direction - samplePos),
                 glm::length((shadowRay.origin + shadowRay.t * shadowRay.direction - (ray.origin + ray.t * ray.direction))) - 0.00001f };
-            
+            drawRay(ray, colour);
+            drawRay(shadowRay, colour);
         }else return { 0, 0, 0 };
         
     }
-    
+
+    drawRay(shadowRay, colour);
+    drawRay(ray, colour);
     return colour;
 }
    
@@ -155,7 +158,7 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                
                 total +=  computeShading(pointLight.position, lightColour, features, ray, hitInfo);              
            
-            } else if (std::holds_alternative<SegmentLight>(light) && features.enableSoftShadow) {
+            } else if (std::holds_alternative<SegmentLight>(light) ) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
                 std::list<PointLight> linepoints;
                 
@@ -167,12 +170,18 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     // If in shadow, apply shadowFactor
                     PointLight light = *it;
                     glm::vec3 lightColour = light.color;
+                    if (features.enableSoftShadow) {
+                        lightColour = testVisibilityLightSample(light.position, lightColour, bvh, features, ray, hitInfo);
+                        drawRay(ray, lightColour);
+                    }
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
-           
+                    drawRay(ray, lightColour);
                    
                 }
 
+                
                 total += color / glm::vec3 { sqrt(50), sqrt(50), sqrt(50) };
+                drawRay(ray, total);
             } else if (std::holds_alternative<ParallelogramLight>(light)) {
                 // TODO: add check for enableSoftShadows -> what to return when softShadows is disabled?
                 const ParallelogramLight parallelogramLight = std::get<ParallelogramLight>(light);
@@ -190,12 +199,15 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                     glm::vec3 lightColour = light.color;
                     if (features.enableSoftShadow) {
                         lightColour = testVisibilityLightSample(light.position, lightColour, bvh, features, ray, hitInfo);
+                        drawRay(ray, lightColour);
                     }
-
+                    
                     color += computeShading(light.position, lightColour, features, ray, hitInfo);
+                    drawRay(ray, color);
                 }
                 
                 total += color / (1.0f * parallelogramLightPoints);
+                drawRay(ray, total);
             }
         }
 
