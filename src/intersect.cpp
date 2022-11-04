@@ -9,11 +9,10 @@ DISABLE_WARNINGS_POP()
 #include <cmath>
 #include <limits>
 #include <iostream>
+#include <interpolate.cpp>
 
-
-bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p) {
-    // Point in triangle test using barycentric coordinates.
-
+bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& n, const glm::vec3& p)
+{
     glm::vec3 side_0 = v1 - v0;
     glm::vec3 side_1 = v2 - v1;
     glm::vec3 side_2 = v0 - v2;
@@ -27,7 +26,7 @@ bool pointInTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& 
     if (alpha >= 0 && beta >= 0 && gamma >= 0) {
         return true;
     }
-    
+
     return false;
 }
 
@@ -55,14 +54,14 @@ Plane trianglePlane(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v
 
 /// Input: the three vertices of the triangle
 /// Output: if intersects then modify the hit parameter ray.t and return true, otherwise return false
-bool intersectRayWithTriangle(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, Ray& ray, HitInfo& hitInfo)
-{    
-    Plane plane = trianglePlane(v0, v1, v2);
+bool intersectRayWithTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2, const Plane plane, Ray& ray, HitInfo& hitInfo, Features features)
+{
     float t = ray.t;
     if (intersectRayWithPlane(plane, ray)) {
-        if (pointInTriangle(v0, v1, v2, plane.normal, ray.origin + ray.t * ray.direction) && ray.t > 0.00001) {
+        glm::vec3 p = ray.origin + ray.t * ray.direction;
+
+        if (pointInTriangle(v0.position, v1.position, v2.position, plane.normal, p)) {
             // Point must be in triangle, therefore hit
-            hitInfo.normal = plane.normal;
             return true;
         } else {
             ray.t = t;
