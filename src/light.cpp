@@ -154,11 +154,10 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                       
                 glm::vec3 lightColour = pointLight.color;
                 if (features.enableHardShadow) {
-                   
                     lightColour = testVisibilityLightSample(pointLight.position, lightColour, bvh, features, ray, hitInfo);
                 }
                
-                total +=  computeShading(pointLight.position, lightColour, features, ray, hitInfo);              
+                total += computeShading(pointLight.position, lightColour, features, ray, hitInfo);              
            
             } else if (std::holds_alternative<SegmentLight>(light) ) {
                 const SegmentLight segmentLight = std::get<SegmentLight>(light);
@@ -212,6 +211,8 @@ glm::vec3 computeLightContribution(const Scene& scene, const BvhInterface& bvh, 
                 drawRay(ray, total);
             }
         }
+
+        
 
         drawRay(ray, total);
         return total;
