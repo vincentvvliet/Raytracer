@@ -11,13 +11,14 @@ struct BVHNode {
     glm::vec3 aabbMax;
     int leftChild;
     int firsttri, triCount;
-    bool isLeaf() const { return triCount>0;}
+    bool isLeaf() const { return triCount > 0; }
 };
 
 struct aabSAHHelper {
     glm::vec3 aabbMin = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
     glm::vec3 aabbMax = { std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min() };
-    void grow(glm::vec3 p) {
+    void grow(glm::vec3 p)
+    {
         aabbMin[0] = fminf(aabbMin[0], p[0]);
         aabbMin[1] = fminf(aabbMin[1], p[1]);
         aabbMin[2] = fminf(aabbMin[2], p[2]);
@@ -27,36 +28,31 @@ struct aabSAHHelper {
         aabbMax[2] = fmaxf(aabbMax[2], p[2]);
     }
 
-    float area() {
+    float area()
+    {
         glm::vec3 extent = aabbMax - aabbMin;
         return extent[0] * extent[1] + extent[1] * extent[2] + extent[2] * extent[0];
     }
 };
 
-
-
 class BoundingVolumeHierarchy {
 public:
     // Constructor. Receives the scene and builds the bounding volume hierarchy.
-    BoundingVolumeHierarchy(Scene* pScene);
+    BoundingVolumeHierarchy(Scene* pScene, const Features& features);
 
-    
+    void UpdateNodeAABBBounds(int NodeId);
 
-    
+    void divide(int NodeId, int axis, bool SAHbinning);
+
     void LevelNodes(int NodeId, std::vector<BVHNode>& resultarray, int currentlevel, int level);
     int tree_height(int NodeId);
-    
 
-    void UpdateNodeBounds(int NodeId);
-    void subdivide(int NodeId, int axis);
     float EvaluateSAH(BVHNode node, int axis1, float pos);
     // Return how many levels there are in the tree that you have constructed.
     [[nodiscard]] int numLevels() const;
 
     // Return how many leaf nodes there are in the tree that you have constructed.
     [[nodiscard]] int numLeaves() const;
-    
-
 
     // Visual Debug 1: Draw the bounding boxes of the nodes at the selected level.
     void debugDrawLevel(int level);
@@ -71,7 +67,9 @@ public:
 
     bool intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId, Features features) const;
 
-
+    float costSAH(BVHNode& node, int axis, float pos) const;
+    float areaAABB(AxisAlignedBox& aabb) const;
+    void growAABB(AxisAlignedBox& aabb, glm::vec3 p) const;
 
 private:
     int m_numLevels;
