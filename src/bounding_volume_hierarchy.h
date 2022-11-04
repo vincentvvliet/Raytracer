@@ -74,7 +74,7 @@ public:
     // is on the correct side of the origin (the new t >= 0).
     bool intersect(Ray& ray, HitInfo& hitInfo, const Features& features) const;
 
-    bool intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const;
+    bool intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId, Features features) const;
 
     float costSAH(BVHNode& node, int axis, float pos) const;
     float areaAABB(AxisAlignedBox& aabb) const;
