@@ -99,7 +99,7 @@ glm::vec3 testVisibilityLightSample(const glm::vec3& samplePos, const glm::vec3 
         }
     }
 
-    drawRay(shadowRay, {1,1,1});
+    drawRay(shadowRay, colour);
    
     return colour;
 }
