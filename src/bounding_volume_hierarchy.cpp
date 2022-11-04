@@ -335,22 +335,24 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
         // TODO: implement here the bounding volume hierarchy traversal.
         // Please note that you should use `features.enableNormalInterp` and `features.enableTextureMapping`
         // to isolate the code that is only needed for the normal interpolation and texture mapping features.
-        return intersectBVH(ray,hitInfo, 0);
+        return intersectBVH(ray,hitInfo, 0, features);
    
     }
 }
 
-bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId) const
+bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeId, Features features) const
 {
+    // BVH traversal code
     std::stack<BVHNode> stack;
     stack.push(nodes[NodeId]);
     float t = ray.t;
     while (!stack.empty()) {
         BVHNode curnode = stack.top();
-        //For debugging
-        //AxisAlignedBox aabb { curnode.aabbMin, curnode.aabbMax };
-        //drawAABB(aabb, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.1f);
+        // For debugging
+        // AxisAlignedBox aabb { curnode.aabbMin, curnode.aabbMax };
+        // drawAABB(aabb, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.1f);
         stack.pop();
+        // if current node is  a lead we try to intersect with all the triangles
         if (curnode.isLeaf()) {
             for (int i = 0; i < curnode.triCount; i++) {
                 int triId = triIdx[curnode.firsttri + i];
@@ -360,11 +362,13 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
                 const auto v0 = mesh.vertices[triangle.x];
                 const auto v1 = mesh.vertices[triangle.y];
                 const auto v2 = mesh.vertices[triangle.z];
-                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
+                Plane plane = trianglePlane(v0.position, v1.position, v2.position);
+                if (intersectRayWithTriangle(v0, v1, v2, plane, ray, hitInfo, features)) {
                     hitInfo.material = mesh.material;
                 }
             }
         } else {
+
             BVHNode leftnode = nodes[curnode.leftChild];
             BVHNode rightnode = nodes[curnode.leftChild + 1];
 
@@ -373,7 +377,10 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
 
             Ray leftray = ray;
             Ray rightray = ray;
+            // If we interesect with both the left child and aabb and the right child  aabb then we push both
             if (intersectRayWithShape(aabbleft, leftray) && intersectRayWithShape(aabbright, rightray)) {
+                // first push the one with the one with the heighest t
+                // so that we end up rendering the one with the lowest t
                 if (leftray.t > rightray.t) {
                     stack.push(rightnode);
                     stack.push(leftnode);
@@ -381,7 +388,9 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
                     stack.push(leftnode);
                     stack.push(rightnode);
                 }
-            } else if (intersectRayWithShape(aabbleft, leftray) && !intersectRayWithShape(aabbright, rightray)) {
+            }
+            // if we only intersect with one child push that one
+            else if (intersectRayWithShape(aabbleft, leftray) && !intersectRayWithShape(aabbright, rightray)) {
                 stack.push(leftnode);
             } else if (!intersectRayWithShape(aabbleft, leftray) && intersectRayWithShape(aabbright, rightray)) {
                 stack.push(rightnode);
@@ -389,6 +398,7 @@ bool BoundingVolumeHierarchy::intersectBVH(Ray& ray, HitInfo& hitInfo, int NodeI
             continue;
         }
     }
+    // if we have found a smaller t we now we intersected if we did not we no we missed
     if (ray.t < t) {
         return true;
     } else {
