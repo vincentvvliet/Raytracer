@@ -12,9 +12,9 @@ DISABLE_WARNINGS_POP()
 // Global variables
 int segmentLightPoints = 50;
 int parallelogramLightPoints = 100;
-float focalLength = 3.0f;
-int depthOfFieldPoints = 100;
-float aperture = 0.5f;
+float focalLength = 2.5f;
+int depthOfFieldPoints = 50;
+float aperture = 0.15f;
 
 Ray depthOfField(Ray ray, int i, int points)
 {
