@@ -303,9 +303,27 @@ bool BoundingVolumeHierarchy::intersect(Ray& ray, HitInfo& hitInfo, const Featur
                 const auto v0 = mesh.vertices[tri[0]];
                 const auto v1 = mesh.vertices[tri[1]];
                 const auto v2 = mesh.vertices[tri[2]];
-                if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
+                Plane plane = trianglePlane(v0.position, v1.position, v2.position);
+                if (intersectRayWithTriangle(v0, v1, v2, plane, ray, hitInfo, features)) {
                     hitInfo.material = mesh.material;
+                    glm::vec3 normal = plane.normal;
+                    glm::vec3 p = ray.origin + ray.t * ray.direction;
+                    glm::vec3 bary = computeBarycentricCoord(v0.position, v1.position, v2.position, p);
+
+                    if (features.enableNormalInterp) {
+                        if (bary.x <= 1.0f && bary.x >= 0.0f && bary.y <= 1.0f && bary.y >= 0.0f && bary.z <= 1.0f && bary.z >= 0.0f) {
+                            normal = interpolateNormal(v0.normal, v1.normal, v2.normal, bary);
+                        }
+                    }
+
+                    if (features.enableTextureMapping) {
+                        if (hitInfo.material.kdTexture) {
+                            hitInfo.material.kd = acquireTexel(*hitInfo.material.kdTexture, interpolateTexCoord(v0.texCoord, v1.texCoord, v2.texCoord, bary));
+                        }
+                    }
+
                     hit = true;
+                    hitInfo.normal = normal;
                 }
             }
         }
